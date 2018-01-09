@@ -1,0 +1,31 @@
+.bayt {
+  direction: rtl;
+  width: 100%;
+  margin: auto;
+  padding-top: 25px;
+  padding-bottom: 25px
+  
+  }
+.satr {
+  text-align: center
+  }
+.misra1 {
+  display: inline-block;
+  text-align: justify;
+
+}
+.misra2 {
+  display: inline-block;
+  text-align: justify;
+}
+.gap {
+  display: inline-block;
+  text-align: center;
+  width: 4%
+}
+.centered_final {
+  margin: auto;
+  text-align: center
+}
+
+
