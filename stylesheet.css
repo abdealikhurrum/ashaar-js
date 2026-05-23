@@ -53,9 +53,11 @@
 /* ── Hemistiches ──────────────────────────────────────────────────────── */
 
 .ashaar-misra {
-  flex:       1 1 0;
-  min-width:  0;
-  text-align: center;
+  flex:                1 1 0;
+  min-width:           0;
+  text-align:          center;
+  /* Enable contextual alternates (includes kashida glyphs in Amiri/Scheherazade) */
+  font-feature-settings: "calt" 1, "kern" 1;
 }
 
 /* Sadr appears on the right in RTL row (first DOM child) */
@@ -73,6 +75,15 @@
   flex:       none;
   text-align: center;
   width:      100%;
+}
+
+/* ── CSS-native justification (opt-in via class or init({justify:'css'})) ─ */
+/* Uses browser's built-in kashida justification for RTL Arabic text.        */
+
+.ashaar--justify .ashaar-misra--sadr,
+.ashaar--justify .ashaar-misra--ajuz {
+  text-align:   justify;
+  text-justify: auto;   /* modern browsers use kashida for RTL Arabic */
 }
 
 /* ── Gap between the two hemistiches ─────────────────────────────────── */
