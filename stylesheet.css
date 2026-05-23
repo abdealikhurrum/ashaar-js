@@ -1,31 +1,109 @@
-.bayt {
-  direction: rtl;
-  width: 100%;
-  margin: auto;
-  padding-top: 25px;
-  padding-bottom: 25px
-  
-  }
-.satr {
-  text-align: center
-  }
-.misra1 {
-  display: inline-block;
-  text-align: justify;
+/* ── Ashaar.js — default stylesheet ─────────────────────────────────────── */
 
+/* Custom properties — override to theme */
+.ashaar {
+  --ashaar-font-family: "Noto Nastaliq Urdu", "Scheherazade New", "Amiri", serif;
+  --ashaar-font-size:   1.4rem;
+  --ashaar-line-height: 2.4;
+  --ashaar-color:       inherit;
+  --ashaar-refrain-color: #b00;
+  --ashaar-gap-width:   3%;
+  --ashaar-stanza-gap:  1.8em;
+  --ashaar-poem-gap:    3em;
+
+  font-family: var(--ashaar-font-family);
+  font-size:   var(--ashaar-font-size);
+  line-height: var(--ashaar-line-height);
+  color:       var(--ashaar-color);
+  direction:   rtl;
+  text-align:  right;
 }
-.misra2 {
-  display: inline-block;
-  text-align: justify;
+
+/* ── Poem ─────────────────────────────────────────────────────────────── */
+
+.ashaar-poem + .ashaar-poem {
+  margin-top: var(--ashaar-poem-gap);
 }
-.gap {
-  display: inline-block;
+
+/* ── Stanza ───────────────────────────────────────────────────────────── */
+
+.ashaar-stanza {
+  display: flex;
+  flex-direction: column;
+}
+
+.ashaar-stanza + .ashaar-stanza {
+  margin-top: var(--ashaar-stanza-gap);
+}
+
+/* ── Bayt ─────────────────────────────────────────────────────────────── */
+
+.ashaar-bayt {
+  display:         flex;
+  flex-direction:  row;         /* RTL: first child → right, last → left  */
+  align-items:     baseline;
+  width:           100%;
+}
+
+/* Solo misra — full-width centred */
+.ashaar-bayt--solo {
+  justify-content: center;
+}
+
+/* ── Hemistiches ──────────────────────────────────────────────────────── */
+
+.ashaar-misra {
+  flex:       1 1 0;
+  min-width:  0;
   text-align: center;
-  width: 4%
-}
-.centered_final {
-  margin: auto;
-  text-align: center
 }
 
+/* Sadr appears on the right in RTL row (first DOM child) */
+.ashaar-misra--sadr {
+  text-align: right;
+}
 
+/* Ajuz appears on the left (last DOM child) */
+.ashaar-misra--ajuz {
+  text-align: left;
+}
+
+/* Full-width solo misra */
+.ashaar-misra--solo {
+  flex:       none;
+  text-align: center;
+  width:      100%;
+}
+
+/* ── Gap between the two hemistiches ─────────────────────────────────── */
+
+.ashaar-gap {
+  flex:       0 0 var(--ashaar-gap-width);
+  min-width:  0.5em;
+}
+
+/* ── Refrain colouring ────────────────────────────────────────────────── */
+
+.ashaar-misra--refrain {
+  color: var(--ashaar-refrain-color);
+}
+
+/* ── Responsive: collapse to single column on narrow screens ─────────── */
+
+@media (max-width: 36em) {
+  .ashaar-bayt {
+    flex-direction: column;
+    align-items:    center;
+  }
+
+  .ashaar-misra--sadr,
+  .ashaar-misra--ajuz {
+    text-align: center;
+    width:      100%;
+    flex:       none;
+  }
+
+  .ashaar-gap {
+    display: none;
+  }
+}
