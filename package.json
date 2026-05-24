@@ -11,6 +11,7 @@
   "files": [
     "ashaar.js",
     "ashaar-tune.js",
+    "ashaar-justify.js",
     "stylesheet.css"
   ],
   "license": "MIT",
