@@ -45,7 +45,7 @@
   } else {
     root.Ashaar = factory();
   }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
 
   // ── Separators and structure regexes ──────────────────────────────────────
 
@@ -206,7 +206,7 @@
   // within each priority tier. Working on codepoints rather than rendered glyphs
   // means "final form" is approximated by position/context — good enough for poetry.
 
-  var Justify = root.AshaarJustify || (typeof require === 'function' && typeof module !== 'undefined' && module.exports ? require('./ashaar-justify') : null);
+  var Justify = root && root.AshaarJustify ? root.AshaarJustify : (typeof require === 'function' && typeof module !== 'undefined' && module.exports ? require('./ashaar-justify') : null);
 
   function justifyMisra(spanEl, probe) {
     var text = spanEl.dataset.ashaarOriginal;
