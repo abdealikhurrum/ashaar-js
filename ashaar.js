@@ -190,56 +190,124 @@
   function renderText(text) { return render(parse(text)); }
 
   // ── Kashida / tatweel justification ───────────────────────────────────────
+  //
+  // Priority levels mirror the HarfBuzz HB_JustificationClass enum (MIT licence,
+  // harfbuzz/harfbuzz-old), which codifies classical Arabic calligraphic rules:
+  //
+  //   12  SEEN    — after Seen/Sad group (س ش ص ض) in medial/initial form
+  //   11  HAADAL  — before final Haa (ه ة) or Dal/Dhal (د ذ)
+  //   10  ALEF    — before final Alef forms (ا آ أ إ) or Lam/Kaf/Gaf
+  //    9  BARA    — after Beh-group immediately before Ra/Yaa
+  //    8  WAW     — before Waw (و), Ain (ع), or Ghayn (غ)
+  //    7  NORMAL  — after any other dual-joining character
+  //
+  // Slots are filled from highest to lowest priority, then by even distribution
+  // within each priority tier. Working on codepoints rather than rendered glyphs
+  // means "final form" is approximated by position/context — good enough for poetry.
 
-  // Arabic-script characters that connect on both sides (U+0640 tatweel can follow them).
-  // Covers core Arabic + common Persian/Urdu extensions.
-  var DUAL_JOIN_RE = /[بت-خس-غف-هى-يـپچژکگںڻڼھہیېۑ]/;
+  var TATWEEL = 'ـ'; // U+0640
 
-  var TATWEEL = 'ـ';
+  // Right-joining codepoints (cannot be char[i] — no tatweel after these)
+  var RIGHT_JOIN = (function () {
+    var s = {};
+    // Hamzas and Alef group
+    [0x0621,0x0622,0x0623,0x0624,0x0625,0x0627,
+    // Dal/Dhal
+     0x062F,0x0630,
+    // Reh/Zayn/Jeh
+     0x0631,0x0632,0x0698,
+    // Waw and extended Waw forms
+     0x0648,0x06C1,0x06C3,0x06BA,
+    // Extended Alef forms
+     0x0671,0x0672,0x0673,0x0675,0x0677,
+    // Miscellaneous right-joining extended Arabic
+     0x06D5].forEach(function (cp) { s[cp] = 1; });
+    return s;
+  }());
 
-  /** Return indices (insertion points) within `word` where tatweel can go. */
-  function tatweelSlots(word) {
-    var pts = [];
-    for (var i = 0; i < word.length - 1; i++) {
-      if (DUAL_JOIN_RE.test(word[i])) pts.push(i + 1);
-    }
-    return pts;
+  function slotPriority(prevCp, nextCp) {
+    // P12 SEEN: after Seen/Sad group
+    if (prevCp === 0x633 || prevCp === 0x634 || prevCp === 0x635 || prevCp === 0x636) return 12;
+
+    // P11 HAADAL: before Haa, TaaMarbutah, Dal, Dhal
+    if (nextCp === 0x647 || nextCp === 0x629 || nextCp === 0x62F || nextCp === 0x630) return 11;
+
+    // P10 ALEF: before Alef forms, Lam, Kaf, Gaf
+    if (nextCp === 0x627 || nextCp === 0x622 || nextCp === 0x623 || nextCp === 0x625 ||
+        nextCp === 0x644 || nextCp === 0x643 || nextCp === 0x6A9 || nextCp === 0x6AF) return 10;
+
+    // P9 BARA: after Beh-group (ب پ ت ث) before Ra/Yaa group
+    var isBeh = (prevCp === 0x628 || prevCp === 0x67E || prevCp === 0x62A || prevCp === 0x62B);
+    var isRaYa = (nextCp === 0x631 || nextCp === 0x632 || nextCp === 0x64A ||
+                  nextCp === 0x649 || nextCp === 0x6CC || nextCp === 0x6D2);
+    if (isBeh && isRaYa) return 9;
+
+    // P8 WAW: before Waw, Ain, Ghayn
+    if (nextCp === 0x648 || nextCp === 0x639 || nextCp === 0x63A) return 8;
+
+    return 7; // NORMAL
   }
 
   /**
-   * Distribute `n` tatweels evenly across the available slots in `text`,
-   * inserting more in longer words proportionally.
+   * Return all valid tatweel insertion slots in `word`, each tagged with its
+   * calligraphic priority (7–12). Higher = insert first.
+   */
+  function tatweelSlots(word) {
+    var slots = [];
+    for (var i = 0; i < word.length - 1; i++) {
+      var cp = word.charCodeAt(i);
+      if (!RIGHT_JOIN[cp] && cp >= 0x0600 && cp <= 0x06FF) {
+        var nextCp = word.charCodeAt(i + 1);
+        slots.push({ pos: i + 1, priority: slotPriority(cp, nextCp) });
+      }
+    }
+    return slots;
+  }
+
+  /**
+   * Insert `n` tatweels into `text`, filling the highest-priority slots first,
+   * distributing evenly within each priority tier.
    */
   function spreadTatweels(text, n) {
     if (n <= 0) return text;
     var words = text.split(' ');
+
+    // Build a flat list of all slots across all words, sorted by priority desc
     var allSlots = [];
     words.forEach(function (w, wi) {
-      tatweelSlots(w).forEach(function (pos) { allSlots.push({ wi: wi, pos: pos }); });
+      tatweelSlots(w).forEach(function (s) {
+        allSlots.push({ wi: wi, pos: s.pos, priority: s.priority });
+      });
     });
     if (!allSlots.length) return text;
 
-    // Even stride through available slots
-    var step = allSlots.length / Math.min(n, allSlots.length);
+    allSlots.sort(function (a, b) {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      return a.wi - b.wi || a.pos - b.pos;
+    });
+
+    // Pick the first n slots (wrapping back to highest priority if n > slots)
+    var chosen = [];
+    for (var i = 0; i < n; i++) chosen.push(allSlots[i % allSlots.length]);
+
+    // Aggregate by (word, position)
     var insertMap = {};
-    for (var i = 0; i < Math.min(n, allSlots.length); i++) {
-      var s = allSlots[Math.min(Math.floor(i * step), allSlots.length - 1)];
+    chosen.forEach(function (s) {
       var key = s.wi + ':' + s.pos;
       insertMap[key] = (insertMap[key] || 0) + 1;
-    }
+    });
 
     return words.map(function (w, wi) {
       var chars = w.split('');
       var offset = 0;
       var ins = [];
       for (var key in insertMap) {
-        var parts = key.split(':');
-        if (+parts[0] === wi) ins.push({ pos: +parts[1], count: insertMap[key] });
+        var kp = key.split(':');
+        if (+kp[0] === wi) ins.push({ pos: +kp[1], count: insertMap[key] });
       }
       ins.sort(function (a, b) { return a.pos - b.pos; });
       ins.forEach(function (entry) {
-        var t = '';
-        for (var k = 0; k < entry.count; k++) t += TATWEEL;
+        var t = new Array(entry.count + 1).join(TATWEEL);
         chars.splice(entry.pos + offset, 0, t);
         offset += entry.count;
       });
