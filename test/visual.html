@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ashaar.js — Visual Test Suite</title>
+
+  <!-- Google Fonts: all open-source fonts used in the test suite -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Noto+Nastaliq+Urdu:wght@400..700&family=Mirza:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=Rakkas&family=Reem+Kufi+Ink&display=swap" rel="stylesheet">
+
+  <!-- Local font (supply test/fonts/FatemiMaqala.woff2 to activate) -->
+  <style>
+    @font-face {
+      font-family: "FatemiMaqala";
+      src: url("fonts/FatemiMaqala.woff2") format("woff2"),
+           url("fonts/FatemiMaqala.ttf")   format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
+
+  <link rel="stylesheet" href="../stylesheet.css">
+
+  <style>
+    /* ── Page chrome ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --page-bg:      #f5f4f0;
+      --card-bg:      #fff;
+      --border:       #ddd;
+      --label-color:  #666;
+      --gap-color:    #bbb;
+      --score-good:   #2a7d4f;
+      --score-mid:    #b07a00;
+      --score-bad:    #b00;
+      --btn-bg:       #f0ede6;
+      --btn-hover:    #e0dcd0;
+    }
+
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      background: var(--page-bg);
+      font-family: system-ui, sans-serif;
+      color: #1a1a1a;
+      direction: ltr;
+    }
+
+    h1 { font-size: 1.25rem; margin: 0 0 .25rem; }
+    .subtitle { color: var(--label-color); font-size: .85rem; margin-bottom: 2rem; }
+
+    /* ── Controls ─────────────────────────────────────────────── */
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding: .75rem 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    #controls label { font-size: .8rem; color: var(--label-color); }
+
+    select, button {
+      font-size: .8rem;
+      padding: .3rem .6rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--btn-bg);
+      cursor: pointer;
+    }
+    button:hover { background: var(--btn-hover); }
+    button.primary { background: #2a4f7d; color: #fff; border-color: #1a3f6d; }
+    button.primary:hover { background: #1a3f6d; }
+
+    #status { font-size: .8rem; color: var(--label-color); margin-left: auto; }
+
+    /* ── Poem grid ────────────────────────────────────────────── */
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: .6rem .9rem;
+      background: #f9f8f5;
+      border-bottom: 1px solid var(--border);
+      direction: ltr;
+    }
+
+    .card-title { font-size: .78rem; font-weight: 600; }
+    .card-meta  { font-size: .72rem; color: var(--label-color); margin-top: .1rem; }
+
+    .card-badges { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: flex-end; }
+    .badge {
+      font-size: .65rem;
+      padding: .15rem .4rem;
+      border-radius: 3px;
+      background: #e8e6e0;
+      color: #555;
+    }
+    .badge.gap   { background: #fff3cd; color: #856404; }
+    .badge.style-naskh    { background: #d4e8ff; color: #1a4f8d; }
+    .badge.style-nastaliq { background: #d4ffe8; color: #1a5a2d; }
+    .badge.style-ruqaa    { background: #f0d4ff; color: #5a1a8d; }
+    .badge.style-diwani   { background: #ffd4d4; color: #8d1a1a; }
+    .badge.style-thuluth  { background: #fff0d4; color: #8d5a1a; }
+    .badge.style-custom   { background: #d4f0ff; color: #1a6a8d; }
+
+    .card-body {
+      padding: 1.2rem 1.4rem;
+    }
+
+    /* Override ashaar defaults per font */
+    .card-body .ashaar {
+      direction: rtl;
+      text-align: right;
+      font-size: 1.3rem;
+      line-height: 2.2;
+    }
+    .card-body .ashaar.font-nastaliq    { font-size: 1.15rem; line-height: 3.2; }
+    .card-body .ashaar.font-ruqaa       { font-size: 1.25rem; }
+    .card-body .ashaar.font-thuluth     { font-size: 1.5rem; line-height: 2.6; }
+    .card-body .ashaar.font-diwani      { font-size: 1.5rem; line-height: 2.6; }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .5rem .9rem;
+      background: #fafaf8;
+      border-top: 1px solid var(--border);
+      direction: ltr;
+    }
+
+    .score-badge {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .15rem .45rem;
+      border-radius: 3px;
+    }
+    .score-badge.good { background: #d4f0e0; color: var(--score-good); }
+    .score-badge.mid  { background: #fff3cd; color: var(--score-mid); }
+    .score-badge.bad  { background: #ffd4d4; color: var(--score-bad); }
+    .score-badge.na   { background: #eee;    color: #888; }
+
+    .calibrate-btn { font-size: .7rem; margin-left: auto; }
+
+    /* ── Font load indicators ─────────────────────────────────── */
+    #font-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      margin-bottom: 1rem;
+      direction: ltr;
+    }
+    .font-pill {
+      font-size: .7rem;
+      padding: .15rem .5rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #eee;
+    }
+    .font-pill.loaded  { background: #d4f0e0; border-color: #9ec9b0; color: var(--score-good); }
+    .font-pill.failed  { background: #ffd4d4; border-color: #e9b0b0; color: var(--score-bad); }
+    .font-pill.pending { background: #fff3cd; border-color: #e9d0a0; color: var(--score-mid); }
+
+    /* ── Recipe export panel ──────────────────────────────────── */
+    #recipe-panel {
+      display: none;
+      position: fixed;
+      inset: 2rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+      z-index: 100;
+      direction: ltr;
+      overflow: auto;
+    }
+    #recipe-panel h2 { margin: 0 0 1rem; font-size: 1rem; }
+    #recipe-output {
+      font-family: monospace;
+      font-size: .8rem;
+      background: #f5f4f0;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      max-height: 60vh;
+      overflow: auto;
+    }
+    #recipe-panel .close-btn { position: absolute; top: 1rem; right: 1rem; }
+
+    /* ── Parser test results ──────────────────────────────────── */
+    #test-results {
+      margin-top: 2rem;
+      direction: ltr;
+    }
+    #test-results h2 { font-size: 1rem; }
+    .test-row { font-size: .8rem; font-family: monospace; padding: .2rem 0; }
+    .test-row.pass { color: var(--score-good); }
+    .test-row.fail { color: var(--score-bad);  }
+    .test-row.diag { color: var(--label-color); }
+  </style>
+</head>
+
+<body>
+
+<h1>Ashaar.js — Visual Test Suite</h1>
+<p class="subtitle">
+  Arabic · Persian · Urdu poetry across Naskh · Nastaliq · Ruqaa · Diwani · Thuluth + FatemiMaqala
+</p>
+
+<!-- Font load status -->
+<div id="font-status"></div>
+
+<!-- Controls -->
+<div id="controls">
+  <label>Script:</label>
+  <select id="filter-script">
+    <option value="all">All scripts</option>
+    <option value="arabic">Arabic</option>
+    <option value="persian">Persian</option>
+    <option value="urdu">Urdu</option>
+  </select>
+
+  <label>Style:</label>
+  <select id="filter-style">
+    <option value="all">All styles</option>
+    <option value="naskh">Naskh</option>
+    <option value="nastaliq">Nastaliq</option>
+    <option value="ruqaa">Ruqaa</option>
+    <option value="diwani">Diwani</option>
+    <option value="thuluth">Thuluth</option>
+    <option value="custom">FatemiMaqala</option>
+  </select>
+
+  <label>Justification:</label>
+  <select id="justify-mode">
+    <option value="none">None</option>
+    <option value="css">CSS (text-justify: auto)</option>
+    <option value="kashida">JS kashida</option>
+  </select>
+
+  <button id="btn-calibrate-all" class="primary">Calibrate all visible</button>
+  <button id="btn-run-tests">Run parser tests</button>
+
+  <span id="status"></span>
+</div>
+
+<!-- Card grid (populated by JS) -->
+<div id="grid"></div>
+
+<!-- Recipe export overlay -->
+<div id="recipe-panel">
+  <button class="close-btn" onclick="document.getElementById('recipe-panel').style.display='none'">✕ Close</button>
+  <h2>Baked Recipe</h2>
+  <pre id="recipe-output"></pre>
+  <button onclick="copyRecipe()" style="margin-top:.75rem">Copy to clipboard</button>
+</div>
+
+<!-- Parser test results area -->
+<div id="test-results"></div>
+
+<script src="../ashaar.js"></script>
+<script src="../ashaar-tune.js"></script>
+<script src="corpus.js"></script>
+<script src="fonts.js"></script>
+<script>
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+var recipes = {};       // fontId → baked recipe JSON
+var scores  = {};       // fontId+poemId → score
+
+// ── Font loading ─────────────────────────────────────────────────────────────
+
+function buildFontStatusBar() {
+  var bar = document.getElementById('font-status');
+  FONTS.forEach(function (f) {
+    var pill = document.createElement('span');
+    pill.className = 'font-pill pending';
+    pill.id = 'pill-' + f.id;
+    pill.textContent = f.family;
+    bar.appendChild(pill);
+  });
+}
+
+function checkFonts() {
+  if (!document.fonts) return;
+  FONTS.forEach(function (f) {
+    var pill = document.getElementById('pill-' + f.id);
+    if (!pill) return;
+    var testStr = f.scripts.indexOf('arabic') !== -1 ? 'بسم' :
+                  f.scripts.indexOf('persian') !== -1 ? 'بشنو' : 'ہزار';
+    document.fonts.load('400 24px ' + f.cssName, testStr).then(function (loaded) {
+      pill.className = 'font-pill ' + (loaded.length ? 'loaded' : 'failed');
+    }).catch(function () {
+      pill.className = 'font-pill failed';
+    });
+  });
+}
+
+// ── Card rendering ───────────────────────────────────────────────────────────
+
+function fontStyleClass(style) {
+  var map = { nastaliq: 'font-nastaliq', ruqaa: 'font-ruqaa',
+              thuluth: 'font-thuluth', diwani: 'font-diwani', custom: 'font-custom' };
+  return map[style] || '';
+}
+
+function makeCard(poem, font) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.script = poem.script;
+  card.dataset.style  = font.style;
+
+  // Only show this font for compatible scripts
+  if (font.scripts.indexOf(poem.script) === -1 && font.id !== 'fatemi-maqala') {
+    card.style.display = 'none';
+    card.dataset.hidden = 'incompatible';
+  }
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.className = 'card-header';
+  hdr.innerHTML =
+    '<div>' +
+      '<div class="card-title">' + poem.poet + ' — ' + poem.title + '</div>' +
+      '<div class="card-meta">' + poem.period + ' · ' + poem.language.toUpperCase() + ' · ' + font.family + '</div>' +
+    '</div>' +
+    '<div class="card-badges">' +
+      '<span class="badge style-' + font.style + '">' + font.style + '</span>' +
+      (font.gap ? '<span class="badge gap" title="' + (font.gapNote || '') + '">⚠ approx.</span>' : '') +
+    '</div>';
+
+  // Body — the ashaar container
+  var body = document.createElement('div');
+  body.className = 'card-body';
+
+  var ashaarEl = document.createElement('div');
+  ashaarEl.className = 'ashaar ' + fontStyleClass(font.style);
+  ashaarEl.style.fontFamily = font.cssName;
+
+  if (font.cssOverrides) {
+    Object.keys(font.cssOverrides).forEach(function (k) {
+      ashaarEl.style[k] = font.cssOverrides[k];
+    });
+  }
+
+  // Use data-ashaar for init to process
+  ashaarEl.setAttribute('data-ashaar', poem.text);
+  body.appendChild(ashaarEl);
+
+  // Footer
+  var ftr = document.createElement('div');
+  ftr.className = 'card-footer';
+
+  var scoreEl = document.createElement('span');
+  scoreEl.className = 'score-badge na';
+  scoreEl.id = 'score-' + font.id + '-' + poem.id;
+  scoreEl.textContent = '—';
+
+  var calBtn = document.createElement('button');
+  calBtn.className = 'calibrate-btn';
+  calBtn.textContent = 'Calibrate';
+  calBtn.onclick = function () { calibrateCard(ashaarEl, font, poem, scoreEl); };
+
+  var srcLink = document.createElement('a');
+  srcLink.href = poem.source || '#';
+  srcLink.target = '_blank';
+  srcLink.rel = 'noopener';
+  srcLink.style.cssText = 'font-size:.68rem;color:#888;direction:ltr;margin-right:auto';
+  srcLink.textContent = '↗ source';
+
+  ftr.appendChild(scoreEl);
+  ftr.appendChild(srcLink);
+  ftr.appendChild(calBtn);
+
+  card.appendChild(hdr);
+  card.appendChild(body);
+  card.appendChild(ftr);
+
+  return card;
+}
+
+function buildGrid() {
+  var grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  CORPUS.forEach(function (poem) {
+    if (poem.form === 'test') return; // skip edge-case entries in visual grid
+    FONTS.forEach(function (font) {
+      grid.appendChild(makeCard(poem, font));
+    });
+  });
+
+  // Let Ashaar render all data-ashaar elements
+  Ashaar.init('[data-ashaar]');
+  applyJustify();
+}
+
+// ── Filtering ────────────────────────────────────────────────────────────────
+
+function applyFilters() {
+  var scriptFilter = document.getElementById('filter-script').value;
+  var styleFilter  = document.getElementById('filter-style').value;
+
+  document.querySelectorAll('.card').forEach(function (card) {
+    if (card.dataset.hidden === 'incompatible') return;
+    var scriptOk = scriptFilter === 'all' || card.dataset.script === scriptFilter;
+    var styleOk  = styleFilter  === 'all' || card.dataset.style  === styleFilter;
+    card.style.display = (scriptOk && styleOk) ? '' : 'none';
+  });
+}
+
+document.getElementById('filter-script').onchange = applyFilters;
+document.getElementById('filter-style').onchange  = applyFilters;
+
+// ── Justification ────────────────────────────────────────────────────────────
+
+function applyJustify() {
+  var mode = document.getElementById('justify-mode').value;
+
+  document.querySelectorAll('.ashaar').forEach(function (el) {
+    el.classList.remove('ashaar--justify');
+    // Reset any previously inserted tatweels
+    el.querySelectorAll('[data-ashaar-original]').forEach(function (span) {
+      span.textContent = span.dataset.ashaarOriginal;
+    });
+  });
+
+  if (mode === 'css') {
+    document.querySelectorAll('.ashaar').forEach(function (el) {
+      el.classList.add('ashaar--justify');
+    });
+  } else if (mode === 'kashida') {
+    document.querySelectorAll('.ashaar').forEach(function (el) {
+      if (el.style.display !== 'none') Ashaar.justifyEl(el);
+    });
+  }
+}
+
+document.getElementById('justify-mode').onchange = applyJustify;
+
+// ── Calibration ───────────────────────────────────────────────────────────────
+
+function scoreClass(s) {
+  if (s === null) return 'na';
+  if (s >= 0.75)  return 'good';
+  if (s >= 0.50)  return 'mid';
+  return 'bad';
+}
+
+function calibrateCard(ashaarEl, font, poem, scoreEl) {
+  scoreEl.className = 'score-badge na';
+  scoreEl.textContent = '…';
+
+  var width = ashaarEl.getBoundingClientRect().width || 400;
+  var cs    = window.getComputedStyle(ashaarEl);
+
+  AshaarTune.probeFont({
+    fontFamily: font.cssName,
+    fontSize:   parseFloat(cs.fontSize) || 28,
+  }).then(function (fp) {
+    return AshaarTune.calibrate({
+      texts:          [poem.text],
+      fontFamily:     font.cssName,
+      fontSize:       parseFloat(cs.fontSize) || 28,
+      containerWidth: Math.floor(width / 2),  // each column is ~half
+      mode:           poem.form === 'ghazal' || poem.form === 'masnavi' || poem.form === 'rubaei'
+                        ? 'poetry' : 'prose',
+      fontProfile:    fp,
+      iterations:     80,
+    });
+  }).then(function (session) {
+    var key = font.id + '-' + poem.id;
+    scores[key]  = session.score;
+    recipes[key] = session.bake();
+
+    scoreEl.textContent = (session.score * 100).toFixed(0) + '%';
+    scoreEl.className   = 'score-badge ' + scoreClass(session.score);
+
+    // Apply recipe immediately
+    var deployer = AshaarTune.loadRecipe(recipes[key]);
+    deployer.justifyEl(ashaarEl.closest('.card').querySelector('.ashaar'));
+  }).catch(function (err) {
+    scoreEl.textContent = 'err';
+    scoreEl.className   = 'score-badge bad';
+    console.error('Calibration failed for', font.id, poem.id, err);
+  });
+}
+
+document.getElementById('btn-calibrate-all').onclick = function () {
+  var visible = [];
+  document.querySelectorAll('.card').forEach(function (card) {
+    if (card.style.display !== 'none') {
+      var ashaarEl = card.querySelector('.ashaar');
+      var scoreEl  = card.querySelector('.score-badge');
+      var cardFont = FONTS_BY_ID[card.querySelector('.card-meta').textContent.split('·').pop().trim()] ||
+                     FONTS.find(function(f){ return card.querySelector('.ashaar').style.fontFamily.indexOf(f.family)!==-1; });
+      if (ashaarEl && scoreEl && cardFont) visible.push({ ashaarEl, scoreEl, cardFont });
+    }
+  });
+  setStatus('Calibrating ' + visible.length + ' cards…');
+  // Stagger to avoid overloading the main thread
+  visible.forEach(function (item, idx) {
+    setTimeout(function () {
+      var poemId = item.ashaarEl.closest('.card').querySelector('.card-meta').textContent.split('·')[0].trim();
+      var poem = CORPUS.find(function(p){ return item.ashaarEl.closest('.card').querySelector('.card-title').textContent.indexOf(p.poet) !== -1; });
+      if (poem) calibrateCard(item.ashaarEl, item.cardFont, poem, item.scoreEl);
+    }, idx * 400);
+  });
+};
+
+// ── Recipe export ─────────────────────────────────────────────────────────────
+
+function showRecipe(key) {
+  document.getElementById('recipe-output').textContent = recipes[key] || '(not yet calibrated)';
+  document.getElementById('recipe-panel').style.display = 'block';
+}
+
+function copyRecipe() {
+  var text = document.getElementById('recipe-output').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(text);
+}
+
+// ── Parser tests (in-browser) ─────────────────────────────────────────────────
+
+document.getElementById('btn-run-tests').onclick = function () {
+  var results = document.getElementById('test-results');
+  results.innerHTML = '<h2>Parser test results</h2>';
+
+  // Capture TAP output by overriding console.log temporarily
+  var lines = [];
+  var origLog = console.log;
+  console.log = function (msg) { lines.push(msg); origLog(msg); };
+
+  // Inject corpus reference for in-browser test access
+  window.__corpus = { CORPUS: CORPUS, CORPUS_BY_LANGUAGE: CORPUS_BY_LANGUAGE,
+    CORPUS_BY_SCRIPT: CORPUS_BY_SCRIPT, POETRY_CORPUS: POETRY_CORPUS,
+    EDGE_CORPUS: EDGE_CORPUS };
+
+  // Inline a minimal version of the test suite
+  runParserTests(results, lines);
+
+  console.log = origLog;
+};
+
+function runParserTests(container, _lines) {
+  var pass = 0, fail = 0;
+
+  function check(cond, desc) {
+    var row = document.createElement('div');
+    row.className = 'test-row ' + (cond ? 'pass' : 'fail');
+    row.textContent = (cond ? '✓ ' : '✗ ') + desc;
+    container.appendChild(row);
+    cond ? pass++ : fail++;
+  }
+
+  function parse(t)  { return Ashaar.parse(t); }
+  function bayts(ps) {
+    var out = [];
+    ps.forEach(function(p){ p.stanzas.forEach(function(s){ s.bayts.forEach(function(b){ out.push(b); }); }); });
+    return out;
+  }
+  function stanzaCount(ps) { return ps.reduce(function(s,p){ return s+p.stanzas.length; },0); }
+
+  check(parse('').length === 0, 'empty input → no poems');
+  check(parse('a \\ b').length === 1, 'inline separator → one poem');
+  check(bayts(parse('a \\ b'))[0].sadr === 'a', 'inline sadr extracted');
+  check(bayts(parse('a \\ b'))[0].ajuz === 'b', 'inline ajuz extracted');
+  check(bayts(parse('solo'))[0].ajuz === null, 'bare line → solo misra (null ajuz)');
+  check(bayts(parse('a \\\nb'))[0].sadr === 'a' && bayts(parse('a \\\nb'))[0].ajuz === 'b', 'trailing-pair works');
+  check(bayts(parse('solo\npaired \\\najuz')).length === 2, 'solo + trailing-pair = 2 bayts');
+  check(bayts(parse('solo\npaired \\\najuz'))[0].ajuz === null, 'solo stays solo when followed by trailing-pair');
+  check(stanzaCount(parse('a \\ b\n\nc \\ d')) === 2, 'blank line → two stanzas');
+  check(parse('a \\ b\n---\nc \\ d').length === 2, '--- → two poems');
+  check(bayts(parse('text %'))[0].sadrRefrain === true, 'refrain marker sets sadrRefrain');
+  check(bayts(parse('a \\ b %'))[0].ajuzRefrain === true, 'inline refrain sets ajuzRefrain');
+  check(bayts(parse('sadr % \\\najuz'))[0].sadrRefrain === true, 'per-misra: sadr refrain');
+  check(bayts(parse('sadr % \\\najuz'))[0].ajuzRefrain === false, 'per-misra: ajuz not refrain');
+
+  // Corpus checks
+  CORPUS.forEach(function (poem) {
+    var ps = parse(poem.text);
+    if (poem.expectedPoems !== undefined)   check(ps.length === poem.expectedPoems, poem.id + ': poem count');
+    if (poem.expectedBayts !== undefined)   check(bayts(ps).length === poem.expectedBayts, poem.id + ': bayt count');
+    if (poem.expectedStanzas !== undefined) check(stanzaCount(ps) === poem.expectedStanzas, poem.id + ': stanza count');
+  });
+
+  var summary = document.createElement('div');
+  summary.style.cssText = 'margin-top:.75rem;font-size:.85rem;font-weight:600;direction:ltr;';
+  summary.style.color = fail ? 'var(--score-bad)' : 'var(--score-good)';
+  summary.textContent = pass + ' passed, ' + fail + ' failed';
+  container.appendChild(summary);
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+buildFontStatusBar();
+checkFonts();
+buildGrid();
+
+</script>
+</body>
+</html>
