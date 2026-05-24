@@ -196,6 +196,105 @@ Both `font-feature-settings: "calt" 1, "kern" 1` are always active, which enable
 
 ---
 
+## ashaar-tune.js — Visual calibration and recipe baking
+
+An optional companion module for optimising kashida justification for a
+specific font and text corpus. No runtime dependency on ashaar.js.
+
+### Three-phase workflow
+
+**1. Probe** — analyse a loaded font for designed kashida glyphs
+
+```js
+// Measures width deltas at large point size to detect designed glyphs vs. generic stretch
+const fp = await AshaarTune.probeFont({ fontFamily: 'Amiri', fontSize: 64 });
+// fp.getQuality('س', 'ي')    → 0–1 quality score for a specific pair
+// fp.getTierQuality(12)      → average quality for the Seen/Sad priority tier
+```
+
+**2. Calibrate** — run a hill-climbing optimiser on your text corpus
+
+The optimiser scores candidates by rendering them to an offscreen canvas
+and measuring two visual metrics:
+
+- **Density evenness** — variance of ink-column pixel density within a line
+- **Stanza harmony** — Pearson correlation of adjacent line profiles (poetry only)
+
+`poetry` mode weights harmony 65 % / density 35 %. `prose` reverses the weighting.
+
+```js
+const session = await AshaarTune.calibrate({
+  texts:          [poem1, poem2, longProseBlock],
+  fontFamily:     'Amiri',
+  fontSize:       32,
+  containerWidth: 700,        // px — the column width lines will be justified to
+  mode:           'poetry',   // 'poetry' | 'prose'
+  fontProfile:    fp,         // from probeFont — optional but improves results
+  iterations:     120,
+  onProgress:     (i, score) => console.log(i, score),
+});
+
+console.log(session.score);  // 0–1
+const recipe = session.bake();  // JSON string — save to a .json file
+```
+
+**3. Deploy** — load a baked recipe for zero-calibration production use
+
+```js
+import recipe from './amiri-poetry.recipe.json' assert { type: 'json' };
+
+const deployer = AshaarTune.loadRecipe(recipe);
+deployer.withFontProfile(fp);   // optional — attach font profile for quality boost
+
+Ashaar.init();                            // parse & render HTML only, no justification
+deployer.justifyEl(document.querySelector('.ashaar'));  // apply baked params
+```
+
+### Baked recipe format
+
+```json
+{
+  "version":      "1.0",
+  "calibratedAt": "2026-01-15T10:30:00.000Z",
+  "mode":         "poetry",
+  "fontFamily":   "Amiri",
+  "score":        0.871,
+  "params": {
+    "priorityBias":     0.852,
+    "targetFill":       0.963,
+    "fontQualityBoost": 1.740
+  }
+}
+```
+
+| Parameter | Range | Effect |
+|-----------|-------|--------|
+| `priorityBias` | 0–1 | 0 = ignore HarfBuzz priority order, distribute uniformly; 1 = strict calligraphic order |
+| `targetFill` | 0.8–1.0 | Fraction of column width to fill — values below 1.0 leave breathing room on shorter lines |
+| `fontQualityBoost` | 0–5 | Extra weight for slots where the font has a designed kashida glyph |
+
+### ML / custom scoring
+
+The visual scorer is replaceable. Wire in a model-based or remote scorer
+before calling `calibrate()`:
+
+```js
+AshaarTune.setScorer(async function (lines, ctx, canvas, mode) {
+  // lines: array of justified text strings for the current candidate
+  // ctx / canvas: Canvas 2D context sized to containerWidth — render here if needed
+  const response = await fetch('/api/score', {
+    method: 'POST',
+    body: JSON.stringify({ lines, mode }),
+  });
+  return (await response.json()).score;  // must return 0–1
+});
+```
+
+The calibrator maximises whatever this function returns, so the training
+objective is fully configurable.
+
+---
+
 ## JS API
 
 ```js
