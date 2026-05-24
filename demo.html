@@ -152,8 +152,44 @@
   </div>
 </div>
 
+<h2 style="margin-top:3rem; border-top:1px solid #ddd; padding-top:2rem;">Justification modes</h2>
+
+<!-- ── 10. CSS-native justification (text-justify: auto) ────────────── -->
+<h2>10. CSS-native justification — <code>ashaar--justify</code> class</h2>
+<p style="direction:ltr;font-size:.85rem;color:#666;margin:0 0 .5rem;">
+  Adds <code>text-align: justify; text-justify: auto</code> — browser uses kashida for RTL Arabic.
+  Works in Chrome/Edge; Firefox falls back to word spacing.
+</p>
+<div class="demo-block">
+  <div class="ashaar arabic ashaar--justify" data-ashaar>
+قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ وَمَنْزِلِ \ بِسِقْطِ اللِّوَى بَيْنَ الدَّخُولِ فَحَوْمَلِ
+بِعَيْنَيَّ هَلَّا بَكَّيَا أَوْ تَبَكَّيَا \ عَلَى النَّأْيِ مِنْ سُعْدَى وَمَا قَدْ تَوَلَّيَا
+  </div>
+</div>
+
+<!-- ── 11. JS kashida justification ─────────────────────────────────── -->
+<h2>11. JS kashida justification — <code>justify: true</code></h2>
+<p style="direction:ltr;font-size:.85rem;color:#666;margin:0 0 .5rem;">
+  Explicit tatweel (U+0640) insertion via DOM measurement + binary search.
+  Each column filled to its exact available width. Responsive via <code>ResizeObserver</code>.
+</p>
+<div class="demo-block">
+  <div class="ashaar arabic" id="justified-demo" data-ashaar>
+أَلَا لَيْتَ شِعْرِي هَلْ أَبِيتَنَّ لَيْلَةً \
+بِوَادٍ وَحَوْلِي إِذْخِرٌ وَجَلِيلُ
+وَهَلْ أَرِدَنَّ يَوْمًا مِيَاهَ مَجَنَّةٍ \
+وَهَلْ يَبْدُوَنَّ لِي شَامَةٌ وَطَفِيلُ
+  </div>
+</div>
+
 <script src="ashaar.js"></script>
-<script>Ashaar.init();</script>
+<script>
+  // Default init for all data-ashaar elements except the ones below
+  Ashaar.init('[data-ashaar]:not(#justified-demo)');
+
+  // JS kashida justification for the dedicated demo block
+  Ashaar.init('#justified-demo', { justify: 'kashida' });
+</script>
 
 </body>
 </html>
