@@ -1,0 +1,16 @@
+{
+  "name": "ashaar-js",
+  "version": "0.1.0",
+  "description": "Arabic/Urdu/Persian poetry formatter for HTML",
+  "main": "ashaar.js",
+  "scripts": {
+    "test": "node test/parser.test.js"
+  },
+  "files": [
+    "ashaar.js",
+    "ashaar-tune.js",
+    "stylesheet.css"
+  ],
+  "license": "MIT",
+  "keywords": ["arabic", "urdu", "persian", "poetry", "rtl", "kashida"]
+}
