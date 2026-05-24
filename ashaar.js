@@ -206,202 +206,35 @@
   // within each priority tier. Working on codepoints rather than rendered glyphs
   // means "final form" is approximated by position/context — good enough for poetry.
 
-  var TATWEEL = 'ـ'; // U+0640
+  var Justify = root.AshaarJustify || (typeof require === 'function' && typeof module !== 'undefined' && module.exports ? require('./ashaar-justify') : null);
 
-  // Right-joining codepoints (cannot be char[i] — no tatweel after these)
-  var RIGHT_JOIN = (function () {
-    var s = {};
-    // Hamzas and Alef group
-    [0x0621,0x0622,0x0623,0x0624,0x0625,0x0627,
-    // Dal/Dhal
-     0x062F,0x0630,
-    // Reh/Zayn/Jeh
-     0x0631,0x0632,0x0698,
-    // Waw and extended Waw forms
-     0x0648,0x06C1,0x06C3,0x06BA,
-    // Extended Alef forms
-     0x0671,0x0672,0x0673,0x0675,0x0677,
-    // Miscellaneous right-joining extended Arabic
-     0x06D5].forEach(function (cp) { s[cp] = 1; });
-    return s;
-  }());
-
-  var ALEF_VARIANTS = {
-    0x0627: 1, 0x0622: 1, 0x0623: 1, 0x0624: 1, 0x0625: 1
-  };
-
-  var BEH_CLASS = {
-    0x0628: 1, 0x067E: 1, 0x062A: 1, 0x062B: 1,
-    0x0686: 1, 0x06A4: 1, 0x069A: 1
-  };
-
-  var REH_CLASS = {
-    0x0631: 1, 0x0632: 1, 0x0698: 1
-  };
-
-  var MEEM_CLASS = {
-    0x0645: 1
-  };
-
-  var YAA_CLASS = {
-    0x064A: 1, 0x0649: 1, 0x0626: 1, 0x06CC: 1
-  };
-
-  function isArabic(cp) {
-    return cp >= 0x0600 && cp <= 0x06FF;
-  }
-
-  function isDualJoining(cp) {
-    return isArabic(cp) && !RIGHT_JOIN[cp];
-  }
-
-  function isAlifVariant(cp) {
-    return !!ALEF_VARIANTS[cp];
-  }
-
-  function isBehClass(cp) {
-    return !!BEH_CLASS[cp];
-  }
-
-  function isRehClass(cp) {
-    return !!REH_CLASS[cp];
-  }
-
-  function isMeemClass(cp) {
-    return !!MEEM_CLASS[cp];
-  }
-
-  function isYaaClass(cp) {
-    return !!YAA_CLASS[cp];
-  }
-
-  function isInitialForm(index, word) {
-    if (index === 0) return true;
-    var prevCp = word.charCodeAt(index - 1);
-    return !isDualJoining(prevCp);
-  }
-
-  function isFinalForm(index, word) {
-    if (index >= word.length - 1) return true;
-    var nextCp = word.charCodeAt(index + 1);
-    return !isDualJoining(nextCp);
-  }
-
-  function isMedialForm(index, word) {
-    return !isInitialForm(index, word) && !isFinalForm(index, word) && isDualJoining(word.charCodeAt(index));
-  }
-
-  function isLamAlefSequence(prevCp, nextCp) {
-    return prevCp === 0x0644 && isAlifVariant(nextCp);
-  }
-
-  function isBehFinalLigature(prevCp, nextCp, nextIndex, word) {
-    return isBehClass(prevCp) && (isRehClass(nextCp) || isMeemClass(nextCp) || isYaaClass(nextCp)) && isFinalForm(nextIndex, word);
-  }
-
-  function shouldSkipTatweelSlot(prevCp, nextCp, nextIndex, word) {
-    if (isLamAlefSequence(prevCp, nextCp)) return true;
-    if (isBehFinalLigature(prevCp, nextCp, nextIndex, word)) return true;
-    if (isInitialForm(nextIndex, word)) return true;
-    return false;
-  }
-
-  function slotPriority(prevCp, nextCp, word, nextIndex) {
-    if (prevCp === 0x0644 && nextIndex !== undefined && isFinalForm(nextIndex, word)) {
-      if (isAlifVariant(nextCp)) return 12;
-      return 1;
+  function justifyMisra(spanEl, probe) {
+    var text = spanEl.dataset.ashaarOriginal;
+    if (text === undefined) {
+      text = spanEl.textContent;
+      spanEl.dataset.ashaarOriginal = text;
     }
-    if (isBehClass(prevCp) && nextIndex !== undefined) {
-      if (isInitialForm(nextIndex, word) || isMedialForm(nextIndex, word)) return 1;
+    if (!text.trim()) return;
+
+    var available = spanEl.getBoundingClientRect().width;
+    if (!available) return;
+
+    var natural = probeWidth(probe, text);
+    if (natural >= available - 1) { spanEl.textContent = text; return; }
+
+    if (!Justify || typeof Justify.spreadTatweels !== 'function') {
+      spanEl.textContent = text;
+      return;
     }
-    // P12 SEEN: after Seen/Sad group
-    if (prevCp === 0x633 || prevCp === 0x634 || prevCp === 0x635 || prevCp === 0x636) return 12;
 
-    // P11 HAADAL: before Haa, TaaMarbutah, Dal, Dhal
-    if (nextCp === 0x647 || nextCp === 0x629 || nextCp === 0x62F || nextCp === 0x630) return 11;
-
-    // P10 ALEF: before Alef forms, Lam, Kaf, Gaf
-    if (nextCp === 0x627 || nextCp === 0x622 || nextCp === 0x623 || nextCp === 0x625 ||
-        nextCp === 0x644 || nextCp === 0x643 || nextCp === 0x6A9 || nextCp === 0x6AF) return 10;
-
-    // P9 BARA: after Beh-group (ب پ ت ث) before Ra/Yaa group
-    var isBeh = (prevCp === 0x628 || prevCp === 0x67E || prevCp === 0x62A || prevCp === 0x62B);
-    var isRaYa = (nextCp === 0x631 || nextCp === 0x632 || nextCp === 0x64A ||
-                  nextCp === 0x649 || nextCp === 0x6CC || nextCp === 0x6D2);
-    if (isBeh && isRaYa) return 9;
-
-    // P8 WAW: before Waw, Ain, Ghayn
-    if (nextCp === 0x648 || nextCp === 0x639 || nextCp === 0x63A) return 8;
-
-    return 7; // NORMAL
-  }
-
-  /**
-   * Return all valid tatweel insertion slots in `word`, each tagged with its
-   * calligraphic priority (7–12). Higher = insert first.
-   */
-  function tatweelSlots(word) {
-    var slots = [];
-    for (var i = 0; i < word.length - 1; i++) {
-      var cp = word.charCodeAt(i);
-      if (!RIGHT_JOIN[cp] && cp >= 0x0600 && cp <= 0x06FF) {
-        var nextCp = word.charCodeAt(i + 1);
-        if (shouldSkipTatweelSlot(cp, nextCp, i + 1, word)) continue;
-        slots.push({ pos: i + 1, priority: slotPriority(cp, nextCp, word, i + 1) });
-      }
+    var lo = 1, hi = text.replace(/\s/g, '').length, best = text;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      var candidate = Justify.spreadTatweels(text, mid);
+      if (probeWidth(probe, candidate) <= available) { best = candidate; lo = mid + 1; }
+      else { hi = mid - 1; }
     }
-    return slots;
-  }
-
-  /**
-   * Insert `n` tatweels into `text`, filling the highest-priority slots first,
-   * distributing evenly within each priority tier.
-   */
-  function spreadTatweels(text, n) {
-    if (n <= 0) return text;
-    var words = text.split(' ');
-
-    // Build a flat list of all slots across all words, sorted by priority desc
-    var allSlots = [];
-    words.forEach(function (w, wi) {
-      tatweelSlots(w).forEach(function (s) {
-        allSlots.push({ wi: wi, pos: s.pos, priority: s.priority });
-      });
-    });
-    if (!allSlots.length) return text;
-
-    allSlots.sort(function (a, b) {
-      if (b.priority !== a.priority) return b.priority - a.priority;
-      return a.wi - b.wi || a.pos - b.pos;
-    });
-
-    // Pick the first n slots (wrapping back to highest priority if n > slots)
-    var chosen = [];
-    for (var i = 0; i < n; i++) chosen.push(allSlots[i % allSlots.length]);
-
-    // Aggregate by (word, position)
-    var insertMap = {};
-    chosen.forEach(function (s) {
-      var key = s.wi + ':' + s.pos;
-      insertMap[key] = (insertMap[key] || 0) + 1;
-    });
-
-    return words.map(function (w, wi) {
-      var chars = w.split('');
-      var offset = 0;
-      var ins = [];
-      for (var key in insertMap) {
-        var kp = key.split(':');
-        if (+kp[0] === wi) ins.push({ pos: +kp[1], count: insertMap[key] });
-      }
-      ins.sort(function (a, b) { return a.pos - b.pos; });
-      ins.forEach(function (entry) {
-        var t = new Array(entry.count + 1).join(TATWEEL);
-        chars.splice(entry.pos + offset, 0, t);
-        offset += entry.count;
-      });
-      return chars.join('');
-    }).join(' ');
+    spanEl.textContent = best;
   }
 
   /** Create a hidden measurement probe styled after `referenceEl`. */
@@ -432,37 +265,7 @@
     return probe.getBoundingClientRect().width;
   }
 
-  /**
-   * Justify one misra span by inserting tatweels to fill its available width.
-   * Reuses a shared probe element for all measurements.
-   */
-  function justifyMisra(spanEl, probe) {
-    var text = spanEl.dataset.ashaarOriginal;
-    if (text === undefined) {
-      // Store the original text the first time
-      text = spanEl.textContent;
-      spanEl.dataset.ashaarOriginal = text;
-    }
-    if (!text.trim()) return;
-
-    var available = spanEl.getBoundingClientRect().width;
-    if (!available) return;
-
-    var natural = probeWidth(probe, text);
-    if (natural >= available - 1) { spanEl.textContent = text; return; }
-
-    // Binary search: maximum tatweel count that still fits
-    var lo = 1, hi = text.replace(/\s/g, '').length, best = text;
-    while (lo <= hi) {
-      var mid = (lo + hi) >> 1;
-      var candidate = spreadTatweels(text, mid);
-      if (probeWidth(probe, candidate) <= available) { best = candidate; lo = mid + 1; }
-      else { hi = mid - 1; }
-    }
-    spanEl.textContent = best;
-  }
-
-  /**
+    /**
    * Apply kashida justification to all two-column misras inside `containerEl`.
    * Waits for fonts to load, then sets up a ResizeObserver for responsive updates.
    */
