@@ -93,17 +93,103 @@
     return s;
   }());
 
-  function slotPriority(prevCp, nextCp) {
-    if (prevCp === 0x633 || prevCp === 0x634 || prevCp === 0x635 || prevCp === 0x636) return 12; // Seen/Sad
-    if (nextCp === 0x647 || nextCp === 0x629 || nextCp === 0x62F || nextCp === 0x630) return 11; // HaaDal
+  var ALEF_VARIANTS = {
+    0x0627: 1, 0x0622: 1, 0x0623: 1, 0x0624: 1, 0x0625: 1
+  };
+
+  var BEH_CLASS = {
+    0x0628: 1, 0x067E: 1, 0x062A: 1, 0x062B: 1,
+    0x0686: 1, 0x06A4: 1, 0x069A: 1
+  };
+
+  var REH_CLASS = {
+    0x0631: 1, 0x0632: 1, 0x0698: 1
+  };
+
+  var MEEM_CLASS = {
+    0x0645: 1
+  };
+
+  var YAA_CLASS = {
+    0x064A: 1, 0x0649: 1, 0x0626: 1, 0x06CC: 1
+  };
+
+  function isArabic(cp) {
+    return cp >= 0x0600 && cp <= 0x06FF;
+  }
+
+  function isDualJoining(cp) {
+    return isArabic(cp) && !RIGHT_JOIN[cp];
+  }
+
+  function isAlifVariant(cp) {
+    return !!ALEF_VARIANTS[cp];
+  }
+
+  function isBehClass(cp) {
+    return !!BEH_CLASS[cp];
+  }
+
+  function isRehClass(cp) {
+    return !!REH_CLASS[cp];
+  }
+
+  function isMeemClass(cp) {
+    return !!MEEM_CLASS[cp];
+  }
+
+  function isYaaClass(cp) {
+    return !!YAA_CLASS[cp];
+  }
+
+  function isInitialForm(index, word) {
+    if (index === 0) return true;
+    var prevCp = word.charCodeAt(index - 1);
+    return !isDualJoining(prevCp);
+  }
+
+  function isFinalForm(index, word) {
+    if (index >= word.length - 1) return true;
+    var nextCp = word.charCodeAt(index + 1);
+    return !isDualJoining(nextCp);
+  }
+
+  function isMedialForm(index, word) {
+    return !isInitialForm(index, word) && !isFinalForm(index, word) && isDualJoining(word.charCodeAt(index));
+  }
+
+  function isLamAlefSequence(prevCp, nextCp) {
+    return prevCp === 0x0644 && isAlifVariant(nextCp);
+  }
+
+  function isBehFinalLigature(prevCp, nextCp, nextIndex, word) {
+    return isBehClass(prevCp) && (isRehClass(nextCp) || isMeemClass(nextCp) || isYaaClass(nextCp)) && isFinalForm(nextIndex, word);
+  }
+
+  function shouldSkipTatweelSlot(prevCp, nextCp, nextIndex, word) {
+    if (isLamAlefSequence(prevCp, nextCp)) return true;
+    if (isBehFinalLigature(prevCp, nextCp, nextIndex, word)) return true;
+    if (isInitialForm(nextIndex, word)) return true;
+    return false;
+  }
+
+  function slotPriority(prevCp, nextCp, word, nextIndex) {
+    if (prevCp === 0x0644 && nextIndex !== undefined && isFinalForm(nextIndex, word)) {
+      if (isAlifVariant(nextCp)) return 12;
+      return 1;
+    }
+    if (isBehClass(prevCp) && nextIndex !== undefined) {
+      if (isInitialForm(nextIndex, word) || isMedialForm(nextIndex, word)) return 1;
+    }
+    if (prevCp === 0x633 || prevCp === 0x634 || prevCp === 0x635 || prevCp === 0x636) return 12;
+    if (nextCp === 0x647 || nextCp === 0x629 || nextCp === 0x62F || nextCp === 0x630) return 11;
     if (nextCp === 0x627 || nextCp === 0x622 || nextCp === 0x623 || nextCp === 0x625 ||
-        nextCp === 0x644 || nextCp === 0x643 || nextCp === 0x6A9 || nextCp === 0x6AF) return 10; // Alef
-    var isBeh  = (prevCp === 0x628 || prevCp === 0x67E || prevCp === 0x62A || prevCp === 0x62B);
-    var isRaYa = (nextCp === 0x631 || nextCp === 0x632 || nextCp === 0x64A ||
-                  nextCp === 0x649 || nextCp === 0x6CC || nextCp === 0x6D2);
-    if (isBeh && isRaYa) return 9;                                                               // BaRa
-    if (nextCp === 0x648 || nextCp === 0x639 || nextCp === 0x63A) return 8;                     // Waw/Ain
-    return 7;                                                                                    // Normal
+        nextCp === 0x644 || nextCp === 0x643 || nextCp === 0x6A9 || nextCp === 0x6AF) return 10;
+    var isBeh = isBehClass(prevCp);
+    var isRaYa = isRehClass(nextCp) || isYaaClass(nextCp);
+    if (isBeh && isRaYa) return 9;
+    if (nextCp === 0x648 || nextCp === 0x639 || nextCp === 0x63A) return 8;
+    return 7;
   }
 
   // ── Canvas helpers ────────────────────────────────────────────────────────
@@ -372,7 +458,8 @@
         var cp = w.charCodeAt(i);
         if (RIGHT_JOIN[cp] || cp < 0x0600 || cp > 0x06FF) continue;
         var nextCp = w.charCodeAt(i + 1);
-        var base   = slotPriority(cp, nextCp);
+        if (shouldSkipTatweelSlot(cp, nextCp, i + 1, w)) continue;
+        var base   = slotPriority(cp, nextCp, w, i + 1);
         var bonus  = 0;
         if (fontProfile) {
           var q = fontProfile.getQuality(w[i], w[i + 1]);
