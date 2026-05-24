@@ -67,8 +67,9 @@
     var line = raw.trim();
     if (!line) return null;
 
-    var isRefrain = /\s*%\s*$/.test(line);
-    if (isRefrain) line = line.replace(/\s*%\s*$/, '').trim();
+    // % may appear at the very end, or just before a trailing separator: "text % \"
+    var isRefrain = /\s*%\s*$/.test(line) || /\s*%\s*[\\*|]\s*$/.test(line);
+    if (isRefrain) line = line.replace(/\s*%(\s*[\\*|]\s*)$/, '$1').replace(/\s*%\s*$/, '').trim();
     if (!line) return null;
 
     var parts = line.split(SEP_RE).map(function (p) { return p.trim(); });
