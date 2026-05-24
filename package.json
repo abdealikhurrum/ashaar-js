@@ -4,7 +4,9 @@
   "description": "Arabic/Urdu/Persian poetry formatter for HTML",
   "main": "ashaar.js",
   "scripts": {
-    "test": "node test/parser.test.js"
+    "test": "node test/parser.test.js",
+    "start": "node server.js",
+    "serve": "node server.js"
   },
   "files": [
     "ashaar.js",
