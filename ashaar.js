@@ -206,7 +206,19 @@
   // within each priority tier. Working on codepoints rather than rendered glyphs
   // means "final form" is approximated by position/context — good enough for poetry.
 
-  var Justify = root && root.AshaarJustify ? root.AshaarJustify : (typeof require === 'function' && typeof module !== 'undefined' && module.exports ? require('./ashaar-justify') : null);
+  // Ensure AshaarJustify is accessible; it may be loaded as a separate script before this one
+  function getJustifyModule() {
+    // In browser: try globalThis first, then window
+    if (typeof globalThis !== 'undefined' && globalThis.AshaarJustify) return globalThis.AshaarJustify;
+    if (typeof window !== 'undefined' && window.AshaarJustify) return window.AshaarJustify;
+    // In Node/CommonJS: try require
+    if (typeof require === 'function' && typeof module !== 'undefined' && module.exports) {
+      try { return require('./ashaar-justify'); } catch (e) {}
+    }
+    return null;
+  }
+  
+  var Justify = getJustifyModule();
 
   function justifyMisra(spanEl, probe) {
     var text = spanEl.dataset.ashaarOriginal;
@@ -222,7 +234,9 @@
     var natural = probeWidth(probe, text);
     if (natural >= available - 1) { spanEl.textContent = text; return; }
 
-    if (!Justify || typeof Justify.spreadTatweels !== 'function') {
+    // Re-check Justify in case it wasn't available at module load time
+    var currentJustify = Justify || getJustifyModule();
+    if (!currentJustify || typeof currentJustify.spreadTatweels !== 'function') {
       spanEl.textContent = text;
       return;
     }
@@ -230,7 +244,7 @@
     var lo = 1, hi = text.replace(/\s/g, '').length, best = text;
     while (lo <= hi) {
       var mid = (lo + hi) >> 1;
-      var candidate = Justify.spreadTatweels(text, mid);
+      var candidate = currentJustify.spreadTatweels(text, mid);
       if (probeWidth(probe, candidate) <= available) { best = candidate; lo = mid + 1; }
       else { hi = mid - 1; }
     }
