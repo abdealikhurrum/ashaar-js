@@ -211,7 +211,17 @@
   
   var Justify = getJustifyModule();
 
-  function justifyMisra(spanEl, probe) {
+  function countWordGaps(text) {
+    var m = text.match(/\s+/g);
+    return m ? m.length : 0;
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function justifyMisra(spanEl, probe, targetWidth, opts) {
+    opts = opts || {};
     var text = spanEl.dataset.ashaarOriginal;
     if (text === undefined) {
       text = spanEl.textContent;
@@ -219,11 +229,36 @@
     }
     if (!text.trim()) return;
 
-    var available = spanEl.getBoundingClientRect().width;
-    if (!available) return;
+    spanEl.style.fontSize = '';
+    spanEl.style.wordSpacing = '';
+    probe.style.fontSize = '';
+    probe.style.wordSpacing = '';
 
+    var available = targetWidth || spanEl.getBoundingClientRect().width;
+    if (!available) return;
     var natural = probeWidth(probe, text);
-    if (natural >= available - 1) { spanEl.textContent = text; return; }
+    var wordGaps = countWordGaps(text);
+    var cs = window.getComputedStyle(spanEl);
+    var fontSize = parseFloat(cs.fontSize) || 16;
+    var maxWordSpacing = typeof opts.maxWordSpacing === 'number' ? opts.maxWordSpacing : fontSize * 0.28;
+    var minWordSpacing = typeof opts.minWordSpacing === 'number' ? opts.minWordSpacing : -fontSize * 0.08;
+    var desiredWordSpacing = wordGaps ? (available - natural) / wordGaps : 0;
+    var wordSpacing = wordGaps ? clamp(desiredWordSpacing, minWordSpacing, maxWordSpacing) : 0;
+    if (wordSpacing) {
+      spanEl.style.wordSpacing = Math.round(wordSpacing * 100) / 100 + 'px';
+      probe.style.wordSpacing = spanEl.style.wordSpacing;
+      natural = probeWidth(probe, text);
+    }
+
+    var scale = 1;
+    var maxScaleDown = typeof opts.maxScaleDown === 'number' ? opts.maxScaleDown : 0.06;
+    if (natural > available && maxScaleDown > 0) {
+      scale = Math.max(1 - maxScaleDown, available / natural);
+      spanEl.style.fontSize = Math.round(scale * 1000) / 10 + '%';
+    }
+
+    var effectiveTarget = available / scale;
+    if (natural >= effectiveTarget - 1) { spanEl.textContent = text; return; }
 
     // Re-check Justify in case it wasn't available at module load time
     var currentJustify = Justify || getJustifyModule();
@@ -236,7 +271,7 @@
     while (lo <= hi) {
       var mid = (lo + hi) >> 1;
       var candidate = currentJustify.spreadTatweels(text, mid);
-      if (probeWidth(probe, candidate) <= available) { best = candidate; lo = mid + 1; }
+      if (probeWidth(probe, candidate) <= effectiveTarget) { best = candidate; lo = mid + 1; }
       else { hi = mid - 1; }
     }
     spanEl.textContent = best;
@@ -270,18 +305,48 @@
     return probe.getBoundingClientRect().width;
   }
 
+  function blockTargets(spans, probe, opts) {
+    opts = opts || {};
+    var metrics = [];
+    var longest = 0;
+
+    for (var i = 0; i < spans.length; i++) {
+      var span = spans[i];
+      var text = span.dataset.ashaarOriginal;
+      if (text === undefined) text = span.textContent;
+      span.style.fontSize = '';
+      span.textContent = text;
+      var natural = probeWidth(probe, text);
+      var available = span.getBoundingClientRect().width;
+      if (natural > longest) longest = natural;
+      metrics.push({ available: available, natural: natural });
+    }
+
+    if (opts.balance === false) {
+      return metrics.map(function (m) { return m.available; });
+    }
+
+    var fill = typeof opts.balanceFill === 'number' ? opts.balanceFill : 1.04;
+    var shared = longest * fill;
+    return metrics.map(function (m) {
+      return Math.min(m.available, shared);
+    });
+  }
+
     /**
    * Apply kashida justification to all two-column misras inside `containerEl`.
    * Waits for fonts to load, then sets up a ResizeObserver for responsive updates.
    */
-  function justifyEl(containerEl) {
+  function justifyEl(containerEl, opts) {
+    opts = opts || {};
     var SELECTOR = '.ashaar-misra--sadr, .ashaar-misra--ajuz';
 
     function run() {
       var spans = containerEl.querySelectorAll(SELECTOR);
       if (!spans.length) return;
       var probe = createProbe(spans[0]);
-      for (var i = 0; i < spans.length; i++) justifyMisra(spans[i], probe);
+      var targets = blockTargets(spans, probe, opts);
+      for (var i = 0; i < spans.length; i++) justifyMisra(spans[i], probe, targets[i], opts);
       document.body.removeChild(probe);
     }
 
@@ -305,6 +370,7 @@
   /**
    * init(selector?, opts?)
    *   opts.justify: 'css' | 'kashida' | true | false
+   *   opts.layout:  'columns' | 'stacked'
    */
   function init(selector, opts) {
     if (selector && typeof selector === 'object' && !opts) { opts = selector; selector = null; }
@@ -317,11 +383,12 @@
       el.innerHTML = renderText(src);
       el.removeAttribute('data-ashaar');
       if (!el.classList.contains('ashaar')) el.classList.add('ashaar');
+      if (opts.layout === 'stacked') el.classList.add('ashaar--stacked');
 
       if (opts.justify === 'css') {
         el.classList.add('ashaar--justify');
       } else if (opts.justify === 'kashida' || opts.justify === true) {
-        justifyEl(el);
+        justifyEl(el, opts);
       }
     }
   }
