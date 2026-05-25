@@ -49,7 +49,7 @@
  *     "fontFamily":    "Amiri",
  *     "score":         0.87,
  *     "params": {
- *       "priorityBias":     0.85,   // 0=ignore HarfBuzz order, 1=strict
+ *       "priorityBias":     0.85,   // legacy field retained for old recipes
  *       "targetFill":       0.96,   // fraction of column width to fill (< 1 = slight breathing room)
  *       "fontQualityBoost": 1.8     // bonus weight for designed-glyph slots
  *     }
@@ -331,10 +331,8 @@
   // ── Justification engine (standalone, mirrors ashaar.js logic) ────────────
 
   /**
-   * Build a slot list for `text` with blended priority scores:
-   *   blended = base_priority * priorityBias
-   *           + 7 * (1 − priorityBias)        [7 = NORMAL, blend toward uniform]
-   *           + fontQuality_bonus
+   * Build a slot list for `text` from AshaarJustify's joining-based slot model,
+   * optionally adding a font-quality bonus for designed tatweel pairs.
    */
   function buildSlots(text, params, fontProfile) {
     if (!JUSTIFY || typeof JUSTIFY.buildSlots !== 'function') {
@@ -367,7 +365,7 @@
   // ── Phase 2: Calibration ─────────────────────────────────────────────────
 
   var DEFAULT_PARAMS = {
-    priorityBias:     0.80,  // start close to strict HarfBuzz order
+    priorityBias:     0.80,  // legacy compatibility field
     targetFill:       0.96,  // 4% breathing room prevents over-stretch on short lines
     fontQualityBoost: 1.80   // moderate font-quality influence
   };

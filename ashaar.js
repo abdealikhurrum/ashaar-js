@@ -192,19 +192,10 @@
 
   // ── Kashida / tatweel justification ───────────────────────────────────────
   //
-  // Priority levels mirror the HarfBuzz HB_JustificationClass enum (MIT licence,
-  // harfbuzz/harfbuzz-old), which codifies classical Arabic calligraphic rules:
-  //
-  //   12  SEEN    — after Seen/Sad group (س ش ص ض) in medial/initial form
-  //   11  HAADAL  — before final Haa (ه ة) or Dal/Dhal (د ذ)
-  //   10  ALEF    — before final Alef forms (ا آ أ إ) or Lam/Kaf/Gaf
-  //    9  BARA    — after Beh-group immediately before Ra/Yaa
-  //    8  WAW     — before Waw (و), Ain (ع), or Ghayn (غ)
-  //    7  NORMAL  — after any other dual-joining character
-  //
-  // Slots are filled from highest to lowest priority, then by even distribution
-  // within each priority tier. Working on codepoints rather than rendered glyphs
-  // means "final form" is approximated by position/context — good enough for poetry.
+  // A tatweel slot is legal only after a character that shapes as initial or
+  // medial: it must connect onward to the following visible Arabic letter.
+  // Diacritics are ignored for shaping, ZWNJ is a hard joining boundary, and
+  // lam-alef sequences are left untouched.
 
   // Ensure AshaarJustify is accessible; it may be loaded as a separate script before this one
   function getJustifyModule() {
