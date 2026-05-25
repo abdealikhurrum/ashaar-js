@@ -13,13 +13,35 @@
   <link rel="stylesheet" href="stylesheet.css">
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      max-width: 780px;
+      max-width: 900px;
       margin: 3rem auto;
       padding: 0 1.5rem;
       background: #faf9f7;
       color: #1a1a1a;
       font-family: sans-serif;
+    }
+
+    .demo-controls {
+      direction: ltr;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .75rem;
+      background: #fff;
+      border: 1px solid #e0ddd8;
+      border-radius: 6px;
+      padding: .75rem 1rem;
+      margin: 1rem 0 2rem;
+      color: #555;
+      font-size: .85rem;
+    }
+
+    .demo-controls input {
+      flex: 1 1 220px;
+      min-width: 140px;
     }
 
     h1, h2, h3 {
@@ -37,6 +59,8 @@
       border-radius: 6px;
       padding: 1.5rem 2rem;
       margin: 1rem 0 2rem;
+      max-width: var(--demo-card-width, 780px);
+      margin-inline: auto;
     }
 
     /* Font variants for different sections */
@@ -47,6 +71,17 @@
 <body>
 
 <h1>Ashaar.js — Layout Demo</h1>
+
+<div class="demo-controls">
+  <label for="demo-width">Card width</label>
+  <input id="demo-width" type="range" min="320" max="880" step="20" value="780">
+  <output id="demo-width-value" for="demo-width">780px</output>
+  <label for="demo-gap-width">Hemistich gap</label>
+  <input id="demo-gap-width" type="range" min="0" max="120" step="4" value="24">
+  <output id="demo-gap-width-value" for="demo-gap-width">24px</output>
+  <label for="demo-gap-symbol">Symbol</label>
+  <input id="demo-gap-symbol" type="text" value="" placeholder="none" size="5">
+</div>
 
 <!-- ── 1. Single bayt (inline separator) ────────────────────────────── -->
 <h2>1. Single bayt — inline <code>\</code> separator</h2>
@@ -91,12 +126,13 @@
 <h2>5. Refrain — full bayt marked with <code>%</code></h2>
 <div class="demo-block">
   <div class="ashaar urdu" data-ashaar>
-مری آنکھوں کو نم کر دے \ کوئی نغمہ الم کر دے %
 
-حسین ابنِ علی آئے \ محمد کے نبی آئے
-سجادہ بپا آئے \ زینب کے ولی آئے
+      ہزاروں خواہشیں ایسی کہ ہر خواہش پہ دم نکلے \ بہت نکلے مرے ارمان لیکن پھر بھی کم نکلے
 
-مری آنکھوں کو نم کر دے \ کوئی نغمہ الم کر دے %
+      نکالا چاہتا ہوں کام لیکن دل فگاری سے \ مگر یہ آہ کیا کرتے ہیں آخر جتنے دم نکلے
+
+      ہوئے مر کے ہم جو رسوا ہوئے کیوں نہ غرقِ دریا \ نہ کہیں جنازہ اٹھتا نہ کہیں مزار ہوتا
+
   </div>
 </div>
 
@@ -185,11 +221,41 @@
 <script src="ashaar-justify.js"></script>
 <script src="ashaar.js"></script>
 <script>
-  // Default init for all data-ashaar elements except the ones below
-  Ashaar.init('[data-ashaar]:not(#justified-demo)');
+  var demoWidth = document.getElementById('demo-width');
+  var demoWidthValue = document.getElementById('demo-width-value');
+  var demoGapWidth = document.getElementById('demo-gap-width');
+  var demoGapWidthValue = document.getElementById('demo-gap-width-value');
+  var demoGapSymbol = document.getElementById('demo-gap-symbol');
 
-  // JS kashida justification for the dedicated demo block
-  Ashaar.init('#justified-demo', { justify: 'kashida' });
+  function demoOptions() {
+    return {
+      layout: 'auto',
+      justify: 'kashida',
+      gapWidth: demoGapWidth.value + 'px',
+      gapSymbol: demoGapSymbol.value
+    };
+  }
+
+  function setDemoWidth() {
+    document.documentElement.style.setProperty('--demo-card-width', demoWidth.value + 'px');
+    demoWidthValue.textContent = demoWidth.value + 'px';
+    document.querySelectorAll('.ashaar').forEach(function (el) {
+      Ashaar.applyAutoLayout(el);
+    });
+  }
+
+  function renderDemo() {
+    demoGapWidthValue.textContent = demoGapWidth.value + 'px';
+    Ashaar.init('[data-ashaar-source], [data-ashaar]', demoOptions());
+    setDemoWidth();
+  }
+
+  demoWidth.oninput = setDemoWidth;
+  demoGapWidth.oninput = renderDemo;
+  demoGapSymbol.oninput = renderDemo;
+
+  // Default init for all data-ashaar elements except the ones below
+  renderDemo();
 </script>
 
 </body>

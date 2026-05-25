@@ -59,7 +59,7 @@ function finish() {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function parse(text) { return Ashaar.parse(text); }
-function render(text) { return Ashaar.renderText(text); }
+function render(text, opts) { return Ashaar.renderText(text, opts); }
 
 function countBayts(poems) {
   return poems.reduce(function (s, p) {
@@ -280,6 +280,18 @@ diag('5. Renderer output');
   var html = render('a & b \\ c & d');
   ok(html.indexOf('&amp;') !== -1, 'ampersand is escaped');
   ok(html.indexOf(' & ') === -1,   'raw ampersand not in output');
+}());
+
+(function testGapSymbolRendering() {
+  var html = render('sadr \\ ajuz', { gapSymbol: '•' });
+  ok(html.indexOf('ashaar-gap-symbol') !== -1, 'render: contains gap symbol wrapper');
+  ok(html.indexOf('>•<') !== -1, 'render: includes requested gap symbol');
+}());
+
+(function testGapSymbolEscaping() {
+  var html = render('sadr \\ ajuz', { gapSymbol: '<>' });
+  ok(html.indexOf('<>') === -1, 'render: escapes raw gap symbol markup');
+  ok(html.indexOf('&lt;&gt;') !== -1, 'render: escaped gap symbol is present');
 }());
 
 (function testStanzaTypeClasses() {

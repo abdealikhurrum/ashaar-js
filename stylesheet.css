@@ -8,6 +8,8 @@
   --ashaar-color:       inherit;
   --ashaar-refrain-color: #b00;
   --ashaar-gap-width:   3%;
+  --ashaar-gap-color:   currentColor;
+  --ashaar-gap-symbol-size: 0.8em;
   --ashaar-stanza-gap:  1.8em;
   --ashaar-poem-gap:    3em;
   --ashaar-stack-indent: 1.75em;
@@ -92,8 +94,18 @@
 /* ── Gap between the two hemistiches ─────────────────────────────────── */
 
 .ashaar-gap {
-  flex:       0 0 var(--ashaar-gap-width);
-  min-width:  0.5em;
+  display:         flex;
+  flex:            0 0 var(--ashaar-gap-width);
+  align-items:     baseline;
+  justify-content: center;
+  min-width:       0.5em;
+  color:           var(--ashaar-gap-color, currentColor);
+  white-space:     nowrap;
+}
+
+.ashaar-gap-symbol {
+  font-size:   var(--ashaar-gap-symbol-size, 0.8em);
+  line-height: 1;
 }
 
 /* ── Stacked bayt layout: sadr above, ajuz slightly indented ─────────── */

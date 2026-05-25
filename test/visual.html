@@ -68,14 +68,18 @@
 
     #controls label { font-size: .8rem; color: var(--label-color); }
 
-    select, button {
+    select, button, input[type="text"] {
       font-size: .8rem;
       padding: .3rem .6rem;
       border: 1px solid var(--border);
       border-radius: 4px;
       background: var(--btn-bg);
+    }
+    select, button {
       cursor: pointer;
     }
+    input[type="range"] { width: 150px; }
+    output { font-size: .8rem; color: var(--label-color); min-width: 3.5rem; }
     button:hover { background: var(--btn-hover); }
     button.primary { background: #2a4f7d; color: #fff; border-color: #1a3f6d; }
     button.primary:hover { background: #1a3f6d; }
@@ -85,7 +89,8 @@
     /* ── Poem grid ────────────────────────────────────────────── */
     #grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--visual-card-width, 420px)), var(--visual-card-width, 420px)));
+      justify-content: center;
       gap: 1.5rem;
     }
 
@@ -260,7 +265,19 @@
     <option value="none">None</option>
     <option value="css">CSS (text-justify: auto)</option>
     <option value="kashida">JS kashida</option>
+    <option value="spacing">JS spacing (Nastaliq-safe)</option>
   </select>
+
+  <label for="card-width">Card width:</label>
+  <input id="card-width" type="range" min="300" max="760" step="20" value="420">
+  <output id="card-width-value" for="card-width">420px</output>
+
+  <label for="gap-width">Hemistich gap:</label>
+  <input id="gap-width" type="range" min="0" max="120" step="4" value="24">
+  <output id="gap-width-value" for="gap-width">24px</output>
+
+  <label for="gap-symbol">Symbol:</label>
+  <input id="gap-symbol" type="text" value="" placeholder="none" size="5">
 
   <button id="btn-calibrate-all" class="primary">Calibrate all visible</button>
   <button id="btn-run-tests">Run parser tests</button>
@@ -361,7 +378,6 @@ function makeCard(poem, font) {
 
   var ashaarEl = document.createElement('div');
   ashaarEl.className = 'ashaar ' + fontStyleClass(font.style);
-  if (poem.form === 'ghazal') ashaarEl.classList.add('ashaar--stacked');
   ashaarEl.style.fontFamily = font.cssName;
 
   if (font.cssOverrides) {
@@ -418,7 +434,8 @@ function buildGrid() {
   });
 
   // Let Ashaar render all data-ashaar elements
-  Ashaar.init('[data-ashaar]');
+  Ashaar.init('[data-ashaar]', visualOptions());
+  applyCardWidth();
   applyJustify();
 }
 
@@ -449,21 +466,68 @@ function applyJustify() {
     // Reset any previously inserted tatweels
     el.querySelectorAll('[data-ashaar-original]').forEach(function (span) {
       span.textContent = span.dataset.ashaarOriginal;
+      span.style.fontSize = '';
+      span.style.wordSpacing = '';
     });
   });
 
   if (mode === 'css') {
     document.querySelectorAll('.ashaar').forEach(function (el) {
+      Ashaar.applyAutoLayout(el);
       el.classList.add('ashaar--justify');
     });
   } else if (mode === 'kashida') {
     document.querySelectorAll('.ashaar').forEach(function (el) {
-      if (el.style.display !== 'none') Ashaar.justifyEl(el);
+      if (el.style.display !== 'none') {
+        Ashaar.applyAutoLayout(el);
+        var spacingOnly = el.classList.contains('font-nastaliq');
+        Ashaar.justifyEl(el, spacingOnly ? { method: 'spacing', tatweel: false } : {});
+      }
+    });
+  } else if (mode === 'spacing') {
+    document.querySelectorAll('.ashaar').forEach(function (el) {
+      if (el.style.display !== 'none') {
+        Ashaar.applyAutoLayout(el);
+        Ashaar.justifyEl(el, { method: 'spacing', tatweel: false });
+      }
     });
   }
 }
 
 document.getElementById('justify-mode').onchange = applyJustify;
+
+function visualOptions() {
+  return {
+    layout: 'auto',
+    gapWidth: document.getElementById('gap-width').value + 'px',
+    gapSymbol: document.getElementById('gap-symbol').value
+  };
+}
+
+function applyCardWidth() {
+  var input = document.getElementById('card-width');
+  var output = document.getElementById('card-width-value');
+  document.documentElement.style.setProperty('--visual-card-width', input.value + 'px');
+  output.textContent = input.value + 'px';
+  document.querySelectorAll('.ashaar').forEach(function (el) {
+    if (el.style.display !== 'none') Ashaar.applyAutoLayout(el);
+  });
+}
+
+document.getElementById('card-width').oninput = function () {
+  applyCardWidth();
+  applyJustify();
+};
+
+function applyGapOptions() {
+  document.getElementById('gap-width-value').textContent = document.getElementById('gap-width').value + 'px';
+  Ashaar.init('[data-ashaar-source], [data-ashaar]', visualOptions());
+  applyCardWidth();
+  applyJustify();
+}
+
+document.getElementById('gap-width').oninput = applyGapOptions;
+document.getElementById('gap-symbol').oninput = applyGapOptions;
 
 // ── Calibration ───────────────────────────────────────────────────────────────
 
@@ -491,8 +555,7 @@ function calibrateCard(ashaarEl, font, poem, scoreEl) {
       fontFamily:     font.cssName,
       fontSize:       parseFloat(cs.fontSize) || 28,
       containerWidth: stacked ? width : Math.floor(width / 2),
-      mode:           poem.form === 'ghazal' || poem.form === 'masnavi' || poem.form === 'rubaei'
-                        ? 'poetry' : 'prose',
+      mode:           'poetry',
       fontProfile:    fp,
       iterations:     80,
     });

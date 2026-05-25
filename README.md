@@ -329,15 +329,29 @@ Ashaar.renderText(str)  →  string
 
 // Process all [data-ashaar] elements (or a custom selector) in place
 Ashaar.init(selector?, opts?)
-// opts.justify: 'css' | 'kashida' | true | false (default: false)
-// opts.layout:  'columns' | 'stacked' (default: 'columns')
+// opts.justify: 'css' | 'kashida' | 'spacing' | true | false (default: false)
+// opts.layout:  'columns' | 'stacked' | 'auto' (default: 'columns')
+// opts.gapWidth: CSS length or px number for inter-hemistich spacing
+// opts.gapSymbol: optional visible separator symbol between hemistiches
 // opts.balanceFill: target shared line width multiplier (default: 1.04)
 // opts.maxWordSpacing / minWordSpacing: px limits for word-gap adjustment
 // opts.maxScaleDown: final small font-size fallback (default: 0.06)
 
 // Stacked bayts put the sadr above the ajuz and indent the ajuz slightly.
-// Useful where two-column hemistiches look sparse.
+// It is a first-order layout choice for Arabic, Persian, and Urdu poems.
 Ashaar.init({ layout: 'stacked', justify: 'kashida' })
+
+// Auto layout is side-by-side when there is room, and falls back to stacked
+// as soon as a hemistich wraps.
+Ashaar.init({ layout: 'auto', justify: 'spacing' })
+
+// Control the gap between hemistiches, with an optional decorative separator.
+Ashaar.init({ layout: 'auto', gapWidth: '2.5em', gapSymbol: '•' })
+
+// For Nastaliq-style scripts/fonts that should avoid horizontal tatweel,
+// use spacing mode. It keeps font shaping features active and balances with
+// word spacing plus the small scale fallback.
+Ashaar.init({ layout: 'stacked', justify: 'spacing' })
 
 // Apply kashida justification to one already-rendered container element
 Ashaar.justifyEl(containerEl)
@@ -361,6 +375,8 @@ Override on `.ashaar` (or any ancestor) to theme:
   --ashaar-color:         inherit;
   --ashaar-refrain-color: #b00;
   --ashaar-gap-width:     3%;       /* space between the two columns */
+  --ashaar-gap-color:     currentColor;
+  --ashaar-gap-symbol-size: 0.8em;
   --ashaar-stanza-gap:    1.8em;
   --ashaar-poem-gap:      3em;
   --ashaar-stack-indent:  1.75em;   /* ajuz indent in stacked layout */
@@ -377,7 +393,9 @@ Override on `.ashaar` (or any ancestor) to theme:
 
     <div class="ashaar-bayt">
       <span class="ashaar-misra ashaar-misra--sadr">…</span>
-      <span class="ashaar-gap" aria-hidden="true"></span>
+      <span class="ashaar-gap" aria-hidden="true">
+        <span class="ashaar-gap-symbol">•</span>
+      </span>
       <span class="ashaar-misra ashaar-misra--ajuz">…</span>
     </div>
 

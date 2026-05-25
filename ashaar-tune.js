@@ -717,7 +717,11 @@
               scale = Math.max(1 - maxScaleDown, target / item.natural);
               item.span.style.fontSize = Math.round(scale * 1000) / 10 + '%';
             }
-            item.span.textContent = justifyLine(item.text, target / scale, ctx, paramsForWidth(recipe, target), fp);
+            if (recipe.method === 'spacing' || recipe.tatweel === false) {
+              item.span.textContent = item.text;
+            } else {
+              item.span.textContent = justifyLine(item.text, target / scale, ctx, paramsForWidth(recipe, target), fp);
+            }
             ctx.wordSpacing = '';
           }
         }

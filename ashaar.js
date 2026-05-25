@@ -30,14 +30,23 @@
  *   <div class="ashaar ashaar--justify" data-ashaar>…</div>
  *
  * JS API:
- *   Ashaar.renderText(str)           → HTML string
+ *   Ashaar.renderText(str, opts?)    → HTML string
  *   Ashaar.init(selector?, opts?)    → processes matching elements in place
  *   Ashaar.justifyEl(containerEl)    → apply kashida justification to one element
  *
  *   opts.justify:
  *     'css'     — adds ashaar--justify class (text-justify: auto, browser-native)
  *     'kashida' — JS tatweel insertion with DOM measurement (most accurate)
+ *     'spacing' — JS word-spacing/scale balancing without inserting tatweels
  *     true      — alias for 'kashida'
+ *   opts.layout:
+ *     'columns' — two-column bayts
+ *     'stacked' — sadr above ajuz, with ajuz indented
+ *     'auto'    — use columns unless a hemistich wraps, then stack the block
+ *   opts.gapWidth:
+ *     CSS length for inter-hemistich spacing, mapped to --ashaar-gap-width
+ *   opts.gapSymbol:
+ *     optional visible symbol rendered between hemistiches
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
@@ -151,7 +160,21 @@
       .replace(/>/g, '&gt;');
   }
 
-  function renderBayt(b) {
+  function cssLength(value) {
+    if (typeof value === 'number' && isFinite(value)) return value + 'px';
+    if (value !== undefined && value !== null) return String(value);
+    return '';
+  }
+
+  function applyRenderOptions(containerEl, opts) {
+    opts = opts || {};
+    if (opts.gapWidth !== undefined) {
+      containerEl.style.setProperty('--ashaar-gap-width', cssLength(opts.gapWidth));
+    }
+  }
+
+  function renderBayt(b, opts) {
+    opts = opts || {};
     var isFullRefrain = b.sadrRefrain && (!b.ajuz || b.ajuzRefrain);
     var baseCls = 'ashaar-bayt' + (isFullRefrain ? ' ashaar-bayt--refrain' : '');
 
@@ -164,10 +187,12 @@
     // DOM order: sadr first → appears on right in RTL flex row
     var sadrCls = 'ashaar-misra ashaar-misra--sadr' + (b.sadrRefrain ? ' ashaar-misra--refrain' : '');
     var ajuzCls = 'ashaar-misra ashaar-misra--ajuz' + (b.ajuzRefrain ? ' ashaar-misra--refrain' : '');
+    var gapSymbol = opts.gapSymbol === undefined || opts.gapSymbol === null ? '' : String(opts.gapSymbol);
+    var gapHtml = gapSymbol ? '<span class="ashaar-gap-symbol">' + esc(gapSymbol) + '</span>' : '';
 
     return '<div class="' + baseCls + '">' +
       '<span class="' + sadrCls + '">' + esc(b.sadr) + '</span>' +
-      '<span class="ashaar-gap" aria-hidden="true"></span>' +
+      '<span class="ashaar-gap" aria-hidden="true">' + gapHtml + '</span>' +
       '<span class="' + ajuzCls + '">' + esc(b.ajuz) + '</span>' +
       '</div>';
   }
@@ -178,17 +203,70 @@
     return 'ashaar-stanza ashaar-stanza--' + (typeMap[mainCount] || 'multi');
   }
 
-  function renderStanza(s) {
-    return '<div class="' + stanzaClass(s.bayts) + '">' + s.bayts.map(renderBayt).join('') + '</div>';
+  function renderStanza(s, opts) {
+    return '<div class="' + stanzaClass(s.bayts) + '">' + s.bayts.map(function (b) {
+      return renderBayt(b, opts);
+    }).join('') + '</div>';
   }
 
-  function renderPoem(p) {
-    return '<div class="ashaar-poem">' + p.stanzas.map(renderStanza).join('') + '</div>';
+  function renderPoem(p, opts) {
+    return '<div class="ashaar-poem">' + p.stanzas.map(function (s) {
+      return renderStanza(s, opts);
+    }).join('') + '</div>';
   }
 
-  function render(poems) { return poems.map(renderPoem).join(''); }
+  function render(poems, opts) {
+    return poems.map(function (p) { return renderPoem(p, opts); }).join('');
+  }
 
-  function renderText(text) { return render(parse(text)); }
+  function renderText(text, opts) { return render(parse(text), opts); }
+
+  // ── Layout selection ──────────────────────────────────────────────────────
+
+  function afterFonts(fn) {
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fn);
+    } else {
+      setTimeout(fn, 150);
+    }
+  }
+
+  function numericLineHeight(el) {
+    var cs = window.getComputedStyle(el);
+    var lh = parseFloat(cs.lineHeight);
+    if (isFinite(lh)) return lh;
+    return (parseFloat(cs.fontSize) || 16) * 1.2;
+  }
+
+  function misraWraps(span) {
+    var rect = span.getBoundingClientRect();
+    return rect.height > numericLineHeight(span) * 1.35;
+  }
+
+  function applyAutoLayout(containerEl) {
+    var wasStacked = containerEl.classList.contains('ashaar--stacked');
+    containerEl.classList.remove('ashaar--stacked');
+    var spans = containerEl.querySelectorAll('.ashaar-misra--sadr, .ashaar-misra--ajuz');
+    var shouldStack = false;
+    for (var i = 0; i < spans.length; i++) {
+      if (misraWraps(spans[i])) {
+        shouldStack = true;
+        break;
+      }
+    }
+    if (shouldStack) containerEl.classList.add('ashaar--stacked');
+    return wasStacked !== shouldStack;
+  }
+
+  function observeAutoLayout(containerEl) {
+    if (typeof window === 'undefined' || !window.ResizeObserver) return;
+    if (containerEl._ashaarAutoLayoutObserver) return;
+    var ro = new ResizeObserver(function () {
+      applyAutoLayout(containerEl);
+    });
+    ro.observe(containerEl);
+    containerEl._ashaarAutoLayoutObserver = ro;
+  }
 
   // ── Kashida / tatweel justification ───────────────────────────────────────
   //
@@ -259,6 +337,7 @@
 
     var effectiveTarget = available / scale;
     if (natural >= effectiveTarget - 1) { spanEl.textContent = text; return; }
+    if (opts.method === 'spacing' || opts.tatweel === false) { spanEl.textContent = text; return; }
 
     // Re-check Justify in case it wasn't available at module load time
     var currentJustify = Justify || getJustifyModule();
@@ -333,7 +412,7 @@
     });
   }
 
-    /**
+  /**
    * Apply kashida justification to all two-column misras inside `containerEl`.
    * Waits for fonts to load, then sets up a ResizeObserver for responsive updates.
    */
@@ -352,17 +431,13 @@
 
     if (typeof document === 'undefined') return;
 
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () {
-        run();
-        if (window.ResizeObserver) {
-          var ro = new ResizeObserver(run);
-          ro.observe(containerEl);
-        }
-      });
-    } else {
-      setTimeout(run, 150);
-    }
+    afterFonts(function () {
+      run();
+      if (window.ResizeObserver) {
+        var ro = new ResizeObserver(run);
+        ro.observe(containerEl);
+      }
+    });
   }
 
   // ── DOM initialisation ────────────────────────────────────────────────────
@@ -370,7 +445,7 @@
   /**
    * init(selector?, opts?)
    *   opts.justify: 'css' | 'kashida' | true | false
-   *   opts.layout:  'columns' | 'stacked'
+   *   opts.layout:  'columns' | 'stacked' | 'auto'
    */
   function init(selector, opts) {
     if (selector && typeof selector === 'object' && !opts) { opts = selector; selector = null; }
@@ -379,19 +454,34 @@
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       var src = el.getAttribute('data-ashaar');
+      var storedSrc = el.getAttribute('data-ashaar-source');
+      if ((!src || !src.trim()) && storedSrc) src = storedSrc;
       if (!src || !src.trim()) src = el.textContent || '';
-      el.innerHTML = renderText(src);
+      el.setAttribute('data-ashaar-source', src);
+      el.innerHTML = renderText(src, opts);
       el.removeAttribute('data-ashaar');
       if (!el.classList.contains('ashaar')) el.classList.add('ashaar');
+      applyRenderOptions(el, opts);
       if (opts.layout === 'stacked') el.classList.add('ashaar--stacked');
 
-      if (opts.justify === 'css') {
-        el.classList.add('ashaar--justify');
-      } else if (opts.justify === 'kashida' || opts.justify === true) {
-        justifyEl(el, opts);
-      }
+      (function (targetEl) {
+        afterFonts(function () {
+          if (opts.layout === 'auto') {
+            applyAutoLayout(targetEl);
+            observeAutoLayout(targetEl);
+          }
+
+          if (opts.justify === 'css') {
+            targetEl.classList.add('ashaar--justify');
+          } else if (opts.justify === 'spacing') {
+            justifyEl(targetEl, Object.assign({}, opts, { method: 'spacing', tatweel: false }));
+          } else if (opts.justify === 'kashida' || opts.justify === true) {
+            justifyEl(targetEl, opts);
+          }
+        });
+      }(el));
     }
   }
 
-  return { parse: parse, render: render, renderText: renderText, init: init, justifyEl: justifyEl };
+  return { parse: parse, render: render, renderText: renderText, init: init, justifyEl: justifyEl, applyAutoLayout: applyAutoLayout, applyRenderOptions: applyRenderOptions };
 }));
