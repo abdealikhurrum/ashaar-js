@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ashaar Justification Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f6f3ec;
+      --panel: #ffffff;
+      --border: #d8d2c7;
+      --muted: #5f5a52;
+      --accent: #1d4f8f;
+      --accent-soft: #dfeaf9;
+      --text: #1d1a17;
+      --shadow: 0 12px 30px rgba(32, 24, 14, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      width: min(60vw, 760px);
+      min-width: 320px;
+      max-width: 100%;
+      resize: horizontal;
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 1rem;
+      direction: rtl;
+      cursor: ew-resize;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .chip {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .sample-box {
+      background: #fbfaf7;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.9rem;
+      font-family: "Amiri", "Scheherazade New", serif;
+      font-size: 1.5rem;
+      line-height: 2.1;
+      text-align: right;
+      min-height: 90px;
+    }
+
+    .sample-box.small {
+      font-size: 1.15rem;
+      line-height: 1.9;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .meta-card {
+      background: #fbfaf7;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
+    }
+
+    .meta-card strong {
+      display: block;
+      font-size: 1.02rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-card span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .slot-list {
+      font-family: "SFMono-Regular", Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.85rem;
+      color: #2f2c27;
+      line-height: 1.7;
+      margin-top: 0.4rem;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+    }
+
+    .kbd {
+      font-family: "SFMono-Regular", monospace;
+      background: #f1eee8;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.05rem 0.35rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Ashaar justification visualizer</h1>
+    <p class="subtitle">Resize the card to see how the tatweel heuristics and target width change the justified result.</p>
+
+    <div class="toolbar">
+      <span>Drag the bottom-right edge of the card to resize it.</span>
+      <span>Current width: <strong id="current-width">0px</strong></span>
+      <span>Target width: <strong id="target-width">0px</strong></span>
+    </div>
+
+    <div id="visual-card" class="card">
+      <div class="card-header">
+        <div>
+          <h2>Live preview</h2>
+          <div class="hint">The card uses CSS <span class="kbd">resize: horizontal</span>, and the output updates on resize.</div>
+        </div>
+        <div class="chip-row">
+          <span class="chip">Amiri</span>
+          <span class="chip">U+0640</span>
+          <span class="chip">live</span>
+        </div>
+      </div>
+
+      <div class="label">Original text</div>
+      <div id="original" class="sample-box small"></div>
+
+      <div class="label">Justified text</div>
+      <div id="justified" class="sample-box"></div>
+
+      <div class="meta-grid">
+        <div class="meta-card">
+          <strong id="slot-count">0 slots</strong>
+          <span>Candidate tatweel insertion points</span>
+        </div>
+        <div class="meta-card">
+          <strong id="inserted-count">0 inserted</strong>
+          <span>Approximate tatweels chosen by the binary search</span>
+        </div>
+        <div class="meta-card">
+          <strong id="natural-width">0px</strong>
+          <span>Original measured width</span>
+        </div>
+      </div>
+
+      <div class="label">Slot details</div>
+      <div id="slot-details" class="slot-list"></div>
+    </div>
+  </div>
+
+  <script src="../ashaar-justify.js"></script>
+  <script>
+    (function () {
+      var card = document.getElementById('visual-card');
+      var original = document.getElementById('original');
+      var justified = document.getElementById('justified');
+      var currentWidth = document.getElementById('current-width');
+      var targetWidth = document.getElementById('target-width');
+      var slotCount = document.getElementById('slot-count');
+      var insertedCount = document.getElementById('inserted-count');
+      var naturalWidth = document.getElementById('natural-width');
+      var slotDetails = document.getElementById('slot-details');
+
+      var text = 'قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ وَمَنْزِلِ';
+      var params = { targetFill: 1, priorityBias: 1, fontQualityBoost: 0 };
+      var fontSize = 20;
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext('2d');
+      context.font = fontSize + 'px Amiri, "Scheherazade New", serif';
+
+      function measureText(text) {
+        return context.measureText(text).width;
+      }
+
+      function describeSlots(slots) {
+        if (!slots.length) return 'No candidate slots were found for this sample.';
+        return slots.map(function (slot, index) {
+          return '#' + (index + 1) + ' pos=' + slot.pos + ' score=' + slot.score.toFixed(2);
+        }).join('\n');
+      }
+
+      function render() {
+        var width = card.getBoundingClientRect().width;
+        var natural = measureText(text);
+        var target = Math.max(width * 1.35, Math.round(natural * 1.1));
+        var slots = AshaarJustify.buildSlots(text, params, null);
+        var justifiedText = AshaarJustify.justifyLine(text, target, { measureText: measureText }, params, null);
+        var inserted = justifiedText.length - text.length;
+
+        original.textContent = text;
+        justified.textContent = justifiedText;
+        currentWidth.textContent = Math.round(width) + 'px';
+        targetWidth.textContent = Math.round(target) + 'px';
+        slotCount.textContent = slots.length + ' slots';
+        insertedCount.textContent = inserted + ' inserted';
+        naturalWidth.textContent = Math.round(natural) + 'px';
+        slotDetails.textContent = describeSlots(slots);
+      }
+
+      render();
+      new ResizeObserver(render).observe(card);
+    }());
+  </script>
+</body>
+</html>
