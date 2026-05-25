@@ -67,17 +67,13 @@
 
 /* Sadr appears on the right in RTL row (first DOM child) */
 .ashaar-misra--sadr {
-  text-align: right;
+  text-align: left;
 }
 
 /* Ajuz appears on the left (last DOM child) */
 .ashaar-misra--ajuz {
-  text-align: left;
+  text-align: right;
 }
-
-/* Full-width solo misra */
-.ashaar-misra--solo {
-  flex:       none;
 
 /* Full-width solo misra */
 .ashaar-misra--solo {

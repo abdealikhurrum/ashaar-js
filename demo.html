@@ -76,6 +76,9 @@
   <label for="demo-width">Card width</label>
   <input id="demo-width" type="range" min="320" max="880" step="20" value="780">
   <output id="demo-width-value" for="demo-width">780px</output>
+  <label for="demo-stack-below">Stack below</label>
+  <input id="demo-stack-below" type="range" min="0" max="760" step="20" value="520">
+  <output id="demo-stack-below-value" for="demo-stack-below">520px</output>
   <label for="demo-gap-width">Hemistich gap</label>
   <input id="demo-gap-width" type="range" min="0" max="120" step="4" value="24">
   <output id="demo-gap-width-value" for="demo-gap-width">24px</output>
@@ -223,6 +226,8 @@
 <script>
   var demoWidth = document.getElementById('demo-width');
   var demoWidthValue = document.getElementById('demo-width-value');
+  var demoStackBelow = document.getElementById('demo-stack-below');
+  var demoStackBelowValue = document.getElementById('demo-stack-below-value');
   var demoGapWidth = document.getElementById('demo-gap-width');
   var demoGapWidthValue = document.getElementById('demo-gap-width-value');
   var demoGapSymbol = document.getElementById('demo-gap-symbol');
@@ -231,6 +236,7 @@
     return {
       layout: 'auto',
       justify: 'kashida',
+      stackBelow: parseFloat(demoStackBelow.value) || 0,
       gapWidth: demoGapWidth.value + 'px',
       gapSymbol: demoGapSymbol.value
     };
@@ -239,8 +245,9 @@
   function setDemoWidth() {
     document.documentElement.style.setProperty('--demo-card-width', demoWidth.value + 'px');
     demoWidthValue.textContent = demoWidth.value + 'px';
+    demoStackBelowValue.textContent = demoStackBelow.value === '0' ? 'off' : demoStackBelow.value + 'px';
     document.querySelectorAll('.ashaar').forEach(function (el) {
-      Ashaar.applyAutoLayout(el);
+      Ashaar.applyAutoLayout(el, demoOptions());
     });
   }
 
@@ -251,6 +258,7 @@
   }
 
   demoWidth.oninput = setDemoWidth;
+  demoStackBelow.oninput = setDemoWidth;
   demoGapWidth.oninput = renderDemo;
   demoGapSymbol.oninput = renderDemo;
 

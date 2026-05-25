@@ -33,4 +33,9 @@ function finish() {
   ok(transformRule && transformRule.indexOf('width: calc') === -1, 'stacked ajuz does not reduce the column width');
 }());
 
+(function testColumnHemistichesHugCenterGap() {
+  ok(/\.ashaar-misra--sadr\s*\{[^}]*text-align:\s*left/.test(css), 'sadr aligns toward center gap');
+  ok(/\.ashaar-misra--ajuz\s*\{[^}]*text-align:\s*right/.test(css), 'ajuz aligns toward center gap');
+}());
+
 finish();

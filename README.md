@@ -331,6 +331,7 @@ Ashaar.renderText(str)  →  string
 Ashaar.init(selector?, opts?)
 // opts.justify: 'css' | 'kashida' | 'spacing' | true | false (default: false)
 // opts.layout:  'columns' | 'stacked' | 'auto' (default: 'columns')
+// opts.stackBelow / autoStackBelow: px width where auto layout stacks early
 // opts.gapWidth: CSS length or px number for inter-hemistich spacing
 // opts.gapSymbol: optional visible separator symbol between hemistiches
 // opts.balanceFill: target shared line width multiplier (default: 1.04)
@@ -342,8 +343,8 @@ Ashaar.init(selector?, opts?)
 Ashaar.init({ layout: 'stacked', justify: 'kashida' })
 
 // Auto layout is side-by-side when there is room, and falls back to stacked
-// as soon as a hemistich wraps.
-Ashaar.init({ layout: 'auto', justify: 'spacing' })
+// as soon as a hemistich wraps, or earlier at a configured width.
+Ashaar.init({ layout: 'auto', stackBelow: 520, justify: 'spacing' })
 
 // Control the gap between hemistiches, with an optional decorative separator.
 Ashaar.init({ layout: 'auto', gapWidth: '2.5em', gapSymbol: '•' })

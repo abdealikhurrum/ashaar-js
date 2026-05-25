@@ -243,26 +243,38 @@
     return rect.height > numericLineHeight(span) * 1.35;
   }
 
-  function applyAutoLayout(containerEl) {
+  function stackBelowWidth(opts) {
+    opts = opts || {};
+    var value = opts.stackBelow !== undefined ? opts.stackBelow : opts.autoStackBelow;
+    var width = typeof value === 'number' ? value : parseFloat(value);
+    return isFinite(width) && width > 0 ? width : null;
+  }
+
+  function applyAutoLayout(containerEl, opts) {
+    opts = opts || {};
     var wasStacked = containerEl.classList.contains('ashaar--stacked');
     containerEl.classList.remove('ashaar--stacked');
     var spans = containerEl.querySelectorAll('.ashaar-misra--sadr, .ashaar-misra--ajuz');
-    var shouldStack = false;
-    for (var i = 0; i < spans.length; i++) {
-      if (misraWraps(spans[i])) {
-        shouldStack = true;
-        break;
+    var breakpoint = stackBelowWidth(opts);
+    var shouldStack = breakpoint !== null && containerEl.getBoundingClientRect().width <= breakpoint;
+
+    if (!shouldStack) {
+      for (var i = 0; i < spans.length; i++) {
+        if (misraWraps(spans[i])) {
+          shouldStack = true;
+          break;
+        }
       }
     }
     if (shouldStack) containerEl.classList.add('ashaar--stacked');
     return wasStacked !== shouldStack;
   }
 
-  function observeAutoLayout(containerEl) {
+  function observeAutoLayout(containerEl, opts) {
     if (typeof window === 'undefined' || !window.ResizeObserver) return;
-    if (containerEl._ashaarAutoLayoutObserver) return;
+    if (containerEl._ashaarAutoLayoutObserver) containerEl._ashaarAutoLayoutObserver.disconnect();
     var ro = new ResizeObserver(function () {
-      applyAutoLayout(containerEl);
+      applyAutoLayout(containerEl, opts);
     });
     ro.observe(containerEl);
     containerEl._ashaarAutoLayoutObserver = ro;
@@ -421,12 +433,14 @@
     var SELECTOR = '.ashaar-misra--sadr, .ashaar-misra--ajuz';
 
     function run() {
+      if (opts.layout === 'auto') containerEl.classList.remove('ashaar--stacked');
       var spans = containerEl.querySelectorAll(SELECTOR);
       if (!spans.length) return;
       var probe = createProbe(spans[0]);
       var targets = blockTargets(spans, probe, opts);
       for (var i = 0; i < spans.length; i++) justifyMisra(spans[i], probe, targets[i], opts);
       document.body.removeChild(probe);
+      if (opts.layout === 'auto') applyAutoLayout(containerEl, opts);
     }
 
     if (typeof document === 'undefined') return;
@@ -467,8 +481,8 @@
       (function (targetEl) {
         afterFonts(function () {
           if (opts.layout === 'auto') {
-            applyAutoLayout(targetEl);
-            observeAutoLayout(targetEl);
+            applyAutoLayout(targetEl, opts);
+            observeAutoLayout(targetEl, opts);
           }
 
           if (opts.justify === 'css') {
