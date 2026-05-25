@@ -78,6 +78,10 @@
 /* Full-width solo misra */
 .ashaar-misra--solo {
   flex:       none;
+
+/* Full-width solo misra */
+.ashaar-misra--solo {
+  flex:       none;
   text-align: center;
   width:      100%;
 }
