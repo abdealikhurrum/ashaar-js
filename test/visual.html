@@ -361,6 +361,7 @@ function makeCard(poem, font) {
 
   var ashaarEl = document.createElement('div');
   ashaarEl.className = 'ashaar ' + fontStyleClass(font.style);
+  if (poem.form === 'ghazal') ashaarEl.classList.add('ashaar--stacked');
   ashaarEl.style.fontFamily = font.cssName;
 
   if (font.cssOverrides) {
@@ -478,6 +479,7 @@ function calibrateCard(ashaarEl, font, poem, scoreEl) {
   scoreEl.textContent = '…';
 
   var width = ashaarEl.getBoundingClientRect().width || 400;
+  var stacked = ashaarEl.classList.contains('ashaar--stacked');
   var cs    = window.getComputedStyle(ashaarEl);
 
   AshaarTune.probeFont({
@@ -488,7 +490,7 @@ function calibrateCard(ashaarEl, font, poem, scoreEl) {
       texts:          [poem.text],
       fontFamily:     font.cssName,
       fontSize:       parseFloat(cs.fontSize) || 28,
-      containerWidth: Math.floor(width / 2),  // each column is ~half
+      containerWidth: stacked ? width : Math.floor(width / 2),
       mode:           poem.form === 'ghazal' || poem.form === 'masnavi' || poem.form === 'rubaei'
                         ? 'poetry' : 'prose',
       fontProfile:    fp,

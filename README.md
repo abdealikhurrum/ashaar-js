@@ -235,6 +235,24 @@ console.log(session.score);  // 0–1
 const recipe = session.bake();  // JSON string — save to a .json file
 ```
 
+To bake responsive proportions for several column widths, use
+`calibrateWidths()`. The baked recipe contains one profile per width, and
+`loadRecipe()` automatically chooses the nearest profile for each rendered
+misra width:
+
+```js
+const session = await AshaarTune.calibrateWidths({
+  texts:          [longQasida1, longQasida2],
+  fontFamily:     'Amiri',
+  fontSize:       32,
+  widths:         [360, 520, 700, 860],
+  mode:           'poetry',
+  iterations:     120,
+});
+
+const responsiveRecipe = session.bake();
+```
+
 **3. Deploy** — load a baked recipe for zero-calibration production use
 
 ```js
@@ -260,7 +278,18 @@ deployer.justifyEl(document.querySelector('.ashaar'));  // apply baked params
     "priorityBias":     0.852,
     "targetFill":       0.963,
     "fontQualityBoost": 1.740
-  }
+  },
+  "widthProfiles": [
+    {
+      "containerWidth": 360,
+      "score": 0.842,
+      "params": {
+        "priorityBias": 0.852,
+        "targetFill": 0.941,
+        "fontQualityBoost": 1.740
+      }
+    }
+  ]
 }
 ```
 
@@ -301,6 +330,14 @@ Ashaar.renderText(str)  →  string
 // Process all [data-ashaar] elements (or a custom selector) in place
 Ashaar.init(selector?, opts?)
 // opts.justify: 'css' | 'kashida' | true | false (default: false)
+// opts.layout:  'columns' | 'stacked' (default: 'columns')
+// opts.balanceFill: target shared line width multiplier (default: 1.04)
+// opts.maxWordSpacing / minWordSpacing: px limits for word-gap adjustment
+// opts.maxScaleDown: final small font-size fallback (default: 0.06)
+
+// Stacked bayts put the sadr above the ajuz and indent the ajuz slightly.
+// Useful where two-column hemistiches look sparse.
+Ashaar.init({ layout: 'stacked', justify: 'kashida' })
 
 // Apply kashida justification to one already-rendered container element
 Ashaar.justifyEl(containerEl)
@@ -326,6 +363,7 @@ Override on `.ashaar` (or any ancestor) to theme:
   --ashaar-gap-width:     3%;       /* space between the two columns */
   --ashaar-stanza-gap:    1.8em;
   --ashaar-poem-gap:      3em;
+  --ashaar-stack-indent:  1.75em;   /* ajuz indent in stacked layout */
 }
 ```
 

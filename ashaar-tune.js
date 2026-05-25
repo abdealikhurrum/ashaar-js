@@ -33,6 +33,17 @@
  *       console.log(session.score);  // 0–1, higher = better
  *       const recipe = session.bake();
  *
+ *     To bake one responsive recipe with profiles for several column widths:
+ *
+ *       const session = await AshaarTune.calibrateWidths({
+ *         texts:      [longQasida1, longQasida2],
+ *         fontFamily: 'Amiri',
+ *         fontSize:   32,
+ *         widths:     [360, 520, 700, 860],
+ *         mode:       'poetry',
+ *       });
+ *       const recipe = session.bake();
+ *
  *  3. DEPLOY
  *     Load a baked JSON recipe and get a drop-in justifyEl replacement.
  *
@@ -68,11 +79,11 @@
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = factory();
+    module.exports = factory(root);
   } else {
-    root.AshaarTune = factory();
+    root.AshaarTune = factory(root);
   }
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
 
   var VERSION = '1.0';
   var TATWEEL  = 'ـ';
@@ -376,6 +387,89 @@
     fontQualityBoost: [0, 5]
   };
 
+  function extractLines(texts) {
+    var lines = [];
+    (texts || []).forEach(function (t) {
+      t.split('\n').forEach(function (raw) {
+        var l = raw.trim()
+          .replace(/\s*%\s*$/, '')        // refrain marker
+          .replace(/\s*[\\*|]\s*$/, '')   // trailing separator
+          .replace(/\s*[\\*|]\s*/g, ' ')  // inline separator -> space
+          .trim();
+        if (l && !/^---/.test(l)) lines.push(l);
+      });
+    });
+    return lines;
+  }
+
+  function roundParams(params) {
+    return {
+      priorityBias:     Math.round(params.priorityBias     * 1000) / 1000,
+      targetFill:       Math.round(params.targetFill       * 1000) / 1000,
+      fontQualityBoost: Math.round(params.fontQualityBoost * 1000) / 1000
+    };
+  }
+
+  function normalizeWidths(options) {
+    var raw = options.widths || options.containerWidths || null;
+    if (!raw && options.containerWidth) raw = [options.containerWidth];
+    if (!raw) raw = [600];
+
+    var seen = {};
+    return raw.map(function (w) { return Math.round(+w); })
+      .filter(function (w) {
+        if (!isFinite(w) || w <= 0 || seen[w]) return false;
+        seen[w] = true;
+        return true;
+      })
+      .sort(function (a, b) { return a - b; });
+  }
+
+  function serializeSession(session) {
+    return {
+      version:       VERSION,
+      calibratedAt:  new Date().toISOString(),
+      mode:          session.mode,
+      fontFamily:    session.fontFamily,
+      fontSize:      session.fontSize,
+      containerWidth: session.containerWidth,
+      score:         Math.round(session.score * 1000) / 1000,
+      params:        roundParams(session.params)
+    };
+  }
+
+  function selectWidthProfile(recipe, width) {
+    var profiles = recipe && recipe.widthProfiles;
+    if (!profiles || !profiles.length) return null;
+
+    var target = +width || 0;
+    var best = profiles[0];
+    var bestDelta = Math.abs((best.containerWidth || best.width || 0) - target);
+    for (var i = 1; i < profiles.length; i++) {
+      var profileWidth = profiles[i].containerWidth || profiles[i].width || 0;
+      var delta = Math.abs(profileWidth - target);
+      if (delta < bestDelta) {
+        best = profiles[i];
+        bestDelta = delta;
+      }
+    }
+    return best;
+  }
+
+  function paramsForWidth(recipe, width) {
+    var profile = selectWidthProfile(recipe, width);
+    return Object.assign({}, DEFAULT_PARAMS, recipe.params || {}, profile && profile.params || {});
+  }
+
+  function countWordGaps(text) {
+    var m = text.match(/\s+/g);
+    return m ? m.length : 0;
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
   /**
    * Run a hill-climbing calibration over sample texts.
    *
@@ -406,19 +500,7 @@
       var fontProfile    = options.fontProfile    || null;
       var onProgress     = options.onProgress     || null;
 
-      // Extract plain text lines from all provided texts,
-      // stripping ashaar.js markup (separators, refrain markers)
-      var lines = [];
-      (options.texts || []).forEach(function (t) {
-        t.split('\n').forEach(function (raw) {
-          var l = raw.trim()
-            .replace(/\s*%\s*$/, '')        // refrain marker
-            .replace(/\s*[\\*|]\s*$/, '')   // trailing separator
-            .replace(/\s*[\\*|]\s*/g, ' ')  // inline separator → space
-            .trim();
-          if (l && !/^---/.test(l)) lines.push(l);
-        });
-      });
+      var lines = extractLines(options.texts || []);
 
       if (!lines.length) return reject(new Error('No text lines extracted from provided texts.'));
 
@@ -466,26 +548,76 @@
           mode:       mode,
           fontFamily: fontFamily,
           fontSize:   fontSize,
+          containerWidth: containerWidth,
 
           /** Serialize to JSON string suitable for static deployment. */
           bake: function () {
-            return JSON.stringify({
-              version:       VERSION,
-              calibratedAt:  new Date().toISOString(),
-              mode:          mode,
-              fontFamily:    fontFamily,
-              fontSize:      fontSize,
-              score:         Math.round(bestScore * 1000) / 1000,
-              params:        {
-                priorityBias:     Math.round(bestParams.priorityBias     * 1000) / 1000,
-                targetFill:       Math.round(bestParams.targetFill       * 1000) / 1000,
-                fontQualityBoost: Math.round(bestParams.fontQualityBoost * 1000) / 1000
-              }
-            }, null, 2);
+            return JSON.stringify(serializeSession(this), null, 2);
           }
         });
       }).catch(reject);
     });
+  }
+
+  /**
+   * Calibrate the same corpus at several target column widths and bake a
+   * responsive recipe with one parameter profile per width.
+   *
+   * options:
+   *   widths/containerWidths {number[]} — target column widths, in px
+   *   ...all calibrate() options
+   */
+  function calibrateWidths(options) {
+    options = options || {};
+    var widths = normalizeWidths(options);
+    if (!widths.length) return Promise.reject(new Error('No valid widths provided.'));
+
+    var sessions = [];
+    var index = 0;
+
+    function next() {
+      if (index >= widths.length) {
+        var middle = sessions[Math.floor(sessions.length / 2)];
+        return {
+          mode:       middle.mode,
+          fontFamily: middle.fontFamily,
+          fontSize:   middle.fontSize,
+          widths:     widths.slice(),
+          sessions:   sessions,
+          params:     middle.params,
+          score:      arrayMean(sessions.map(function (s) { return s.score; })),
+
+          bake: function () {
+            var widthProfiles = sessions.map(function (session) {
+              var baked = serializeSession(session);
+              return {
+                containerWidth: baked.containerWidth,
+                score:          baked.score,
+                params:         baked.params
+              };
+            });
+            return JSON.stringify({
+              version:       VERSION,
+              calibratedAt:  new Date().toISOString(),
+              mode:          middle.mode,
+              fontFamily:    middle.fontFamily,
+              fontSize:      middle.fontSize,
+              score:         Math.round(this.score * 1000) / 1000,
+              params:        roundParams(middle.params),
+              widthProfiles: widthProfiles
+            }, null, 2);
+          }
+        };
+      }
+
+      var width = widths[index++];
+      return calibrate(Object.assign({}, options, { containerWidth: width })).then(function (session) {
+        sessions.push(session);
+        return next();
+      });
+    }
+
+    return Promise.resolve().then(next);
   }
 
   // ── Phase 3: Recipe loading ───────────────────────────────────────────────
@@ -512,7 +644,7 @@
     }
     if (!recipe || !recipe.params) throw new Error('AshaarTune.loadRecipe: missing params field.');
 
-    var params      = Object.assign({}, DEFAULT_PARAMS, recipe.params);
+    var params      = paramsForWidth(recipe, recipe.containerWidth || recipe.width || 0);
     var fontProfile = null;
 
     var deployer = {
@@ -541,6 +673,8 @@
           var fontFamily = cs.fontFamily;
           var pair       = makeCtx(fontFamily, fontSize);
           var ctx        = pair.ctx;
+          var metrics    = [];
+          var longest    = 0;
 
           for (var i = 0; i < spans.length; i++) {
             var span = spans[i];
@@ -549,9 +683,42 @@
               orig = span.textContent;
               span.dataset.ashaarOriginal = orig;
             }
-            if (!orig.trim()) continue;
+            span.textContent = orig;
+            span.style.fontSize = '';
+            var natural = ctx.measureText(orig).width;
             var available = span.getBoundingClientRect().width;
-            if (available) span.textContent = justifyLine(orig, available, ctx, params, fp);
+            if (natural > longest) longest = natural;
+            metrics.push({ span: span, text: orig, natural: natural, available: available });
+          }
+
+          var balanceFill = recipe.balanceFill || params.balanceFill || 1.04;
+          var maxScaleDown = typeof recipe.maxScaleDown === 'number' ? recipe.maxScaleDown : 0.06;
+          var sharedTarget = longest * balanceFill;
+
+          for (var j = 0; j < metrics.length; j++) {
+            var item = metrics[j];
+            if (!item.text.trim() || !item.available) continue;
+            var target = Math.min(item.available, sharedTarget);
+            var scale = 1;
+            var wordGaps = countWordGaps(item.text);
+            var maxWordSpacing = typeof recipe.maxWordSpacing === 'number' ? recipe.maxWordSpacing : fontSize * 0.28;
+            var minWordSpacing = typeof recipe.minWordSpacing === 'number' ? recipe.minWordSpacing : -fontSize * 0.08;
+            var desiredWordSpacing = wordGaps ? (target - item.natural) / wordGaps : 0;
+            var wordSpacing = wordGaps ? clamp(desiredWordSpacing, minWordSpacing, maxWordSpacing) : 0;
+            if (wordSpacing) {
+              item.span.style.wordSpacing = Math.round(wordSpacing * 100) / 100 + 'px';
+              ctx.wordSpacing = item.span.style.wordSpacing;
+              item.natural = ctx.measureText(item.text).width;
+            } else {
+              item.span.style.wordSpacing = '';
+              ctx.wordSpacing = '';
+            }
+            if (item.natural > target && maxScaleDown > 0) {
+              scale = Math.max(1 - maxScaleDown, target / item.natural);
+              item.span.style.fontSize = Math.round(scale * 1000) / 10 + '%';
+            }
+            item.span.textContent = justifyLine(item.text, target / scale, ctx, paramsForWidth(recipe, target), fp);
+            ctx.wordSpacing = '';
           }
         }
 
@@ -605,6 +772,7 @@
   return {
     probeFont:  probeFont,
     calibrate:  calibrate,
+    calibrateWidths: calibrateWidths,
     loadRecipe: loadRecipe,
     setScorer:  setScorer,
 
@@ -614,7 +782,11 @@
       scoreDensityEvenness: scoreDensityEvenness,
       scoreStanzaHarmony:   scoreStanzaHarmony,
       justifyLine:          justifyLine,
-      buildSlots:           buildSlots
+      buildSlots:           buildSlots,
+      extractLines:         extractLines,
+      normalizeWidths:      normalizeWidths,
+      paramsForWidth:       paramsForWidth,
+      selectWidthProfile:   selectWidthProfile
     }
   };
 }));

@@ -96,6 +96,14 @@
     return prevCp === 0x0644 && isAlifVariant(nextCp);
   }
 
+  // Allah in the common spelling لله uses a special shaping sequence.
+  function isAllahWord(letters) {
+    return letters.length === 3 &&
+      letters[0].cp === 0x0644 &&
+      letters[1].cp === 0x0644 &&
+      letters[2].cp === 0x0647;
+  }
+
   function canInsertTatweel(word, current, next) {
     if (!connectsToNext(word, current, next)) return false;
     if (isLamAlefSequence(current.cp, next.cp)) return false;
@@ -110,6 +118,7 @@
   function tatweelSlots(word) {
     var slots = [];
     var letters = getLetters(word);
+    if (isAllahWord(letters)) return slots;
     for (var i = 0; i < letters.length - 1; i++) {
       if (canInsertTatweel(word, letters[i], letters[i + 1])) {
         slots.push({ pos: insertionPosition(letters[i + 1]), priority: DEFAULT_PRIORITY });
@@ -175,6 +184,7 @@
     var slots = [];
     words.forEach(function (w, wi) {
       var letters = getLetters(w);
+      if (isAllahWord(letters)) return;
       for (var i = 0; i < letters.length - 1; i++) {
         var current = letters[i];
         var next = letters[i + 1];

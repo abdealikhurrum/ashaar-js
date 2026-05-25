@@ -38,6 +38,16 @@ function finish() {
   eq(slots.length, 0, 'tatweelSlots returns no slots for a lam-alef sequence with diacritics');
 }());
 
+(function testAllahWordIsProtected() {
+  var slots = AshaarJustify.tatweelSlots('لله');
+  deepEq(slots, [], 'tatweelSlots returns no slots for لله');
+}());
+
+(function testAllahWordWithMarksIsProtected() {
+  var text = 'لِلَّهِ';
+  eq(AshaarJustify.spreadTatweels(text, 3), text, 'spreadTatweels keeps marked لله intact');
+}());
+
 (function testTatweelSlotsAllowInitialAndMedialForms() {
   var slots = AshaarJustify.tatweelSlots('بيت');
   deepEq(slots, [
