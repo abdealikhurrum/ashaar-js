@@ -253,6 +253,7 @@
     var w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
     ctx.fillText(text, w - 4, h / 2); // right-aligned for RTL
+    ctx.willReadFrequently = true; // hint for performance
     var data = ctx.getImageData(0, 0, w, h).data;
     var profile = new Float32Array(w);
     for (var x = 0; x < w; x++) {
