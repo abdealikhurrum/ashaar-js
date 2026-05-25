@@ -9,11 +9,13 @@
 
   // The tatweel is the Arabic stretching character used for justification.
   var TATWEEL = 'ـ';
+  var ZWNJ = 0x200C;
+  var DEFAULT_PRIORITY = 7;
 
-  // Letters that do not connect to the following character are treated as right-joining.
+  // Letters that can connect from the previous character but not onward.
   var RIGHT_JOIN = (function () {
     var s = {};
-    [0x0621,0x0622,0x0623,0x0624,0x0625,0x0627,
+    [0x0622,0x0623,0x0624,0x0625,0x0627,
      0x062F,0x0630,
      0x0631,0x0632,0x0698,
      0x0648,0x06C1,0x06C3,0x06BA,
@@ -22,50 +24,42 @@
     return s;
   }());
 
-  // Certain Arabic letters need special handling when they form lam-alef ligatures.
+  // Bare hamza does not connect on either side.
+  var NON_JOIN = { 0x0621: 1 };
+
+  // Lam + alef forms a required ligature and must never be split by tatweel.
   var ALEF_VARIANTS = {
     0x0627: 1, 0x0622: 1, 0x0623: 1, 0x0624: 1, 0x0625: 1
   };
 
-  // Letters that behave like beh in final/medial ligature contexts.
-  var BEH_CLASS = {
-    0x0628: 1, 0x067E: 1, 0x062A: 1, 0x062B: 1,
-    0x0686: 1, 0x06A4: 1, 0x069A: 1
-  };
-
-  // Reh family letters used for ligature heuristics.
-  var REH_CLASS = {
-    0x0631: 1, 0x0632: 1, 0x0698: 1
-  };
-
-  // Meem is used in a special beh-final ligature check.
-  var MEEM_CLASS = {
-    0x0645: 1
-  };
-
-  // Yaa-family letters are also considered in ligature heuristics.
-  var YAA_CLASS = {
-    0x064A: 1, 0x0649: 1, 0x0626: 1, 0x06CC: 1
-  };
-
-  // Returns true when the code point is in the Arabic block.
-  function isArabic(cp) {
-    return cp >= 0x0600 && cp <= 0x06FF;
-  }
-
   // Arabic combining marks (harakat) should not be treated as letters.
   function isArabicMark(cp) {
-    return (cp >= 0x064B && cp <= 0x065F) || cp === 0x0670;
+    return (cp >= 0x0610 && cp <= 0x061A) ||
+      (cp >= 0x064B && cp <= 0x065F) ||
+      cp === 0x0670 ||
+      (cp >= 0x06D6 && cp <= 0x06ED);
   }
 
   // ZWNJ is a hard connection boundary in Persian/Arabic shaping.
   function isZwnj(cp) {
-    return cp === 0x200C;
+    return cp === ZWNJ;
   }
 
-  // Dual-joining letters are the ones that can form a medial connection.
+  function isArabicLetter(cp) {
+    return (cp >= 0x0621 && cp <= 0x063A) ||
+      (cp >= 0x0641 && cp <= 0x064A) ||
+      (cp >= 0x066E && cp <= 0x066F) ||
+      (cp >= 0x0671 && cp <= 0x06D3) ||
+      cp === 0x06D5;
+  }
+
+  function isJoiningLetter(cp) {
+    return isArabicLetter(cp) && !isArabicMark(cp) && !isZwnj(cp) && !NON_JOIN[cp];
+  }
+
+  // Dual-joining letters are the ones that can connect onward to the left.
   function isDualJoining(cp) {
-    return isArabic(cp) && !isArabicMark(cp) && !RIGHT_JOIN[cp];
+    return isJoiningLetter(cp) && !RIGHT_JOIN[cp];
   }
 
   // Returns true for alef variants used in lam-alef ligature detection.
@@ -73,98 +67,28 @@
     return !!ALEF_VARIANTS[cp];
   }
 
-  // Convenience helpers for letter class lookups.
-  function isBehClass(cp) {
-    return !!BEH_CLASS[cp];
-  }
-
-  function isRehClass(cp) {
-    return !!REH_CLASS[cp];
-  }
-
-  function isMeemClass(cp) {
-    return !!MEEM_CLASS[cp];
-  }
-
-  function isYaaClass(cp) {
-    return !!YAA_CLASS[cp];
-  }
-
-  function nextVisibleLetterIndex(index, word) {
-    for (var i = index; i < word.length; i++) {
-      var cp = word.charCodeAt(i);
-      if (isZwnj(cp)) return -1;
-      if (!isArabicMark(cp)) return i;
-    }
-    return -1;
-  }
-
-  function prevVisibleLetterIndex(index, word) {
-    for (var i = index; i >= 0; i--) {
-      var cp = word.charCodeAt(i);
-      if (isZwnj(cp)) return -1;
-      if (!isArabicMark(cp)) return i;
-    }
-    return -1;
-  }
-
-  function getLetterIndices(word) {
-    var indices = [];
+  function getLetters(word) {
+    var letters = [];
     for (var i = 0; i < word.length; i++) {
       var cp = word.charCodeAt(i);
-      if (isZwnj(cp) || isArabicMark(cp)) continue;
-      indices.push(i);
+      if (isJoiningLetter(cp)) letters.push({ index: i, cp: cp });
     }
-    return indices;
+    return letters;
   }
 
-  function isNearFinalVisibleSlot(index, word) {
-    var letterIndices = getLetterIndices(word);
-    if (!letterIndices.length) return false;
-    return index >= letterIndices[letterIndices.length - 2];
-  }
-
-  function isShortWordInitialSlot(index, word) {
-    var letterIndices = getLetterIndices(word);
-    return letterIndices.length <= 4 && index <= letterIndices[1];
-  }
-
-  function hasIsolatedTail(word) {
-    var letterIndices = getLetterIndices(word);
-    return letterIndices.length > 1 && isIsolatedForm(letterIndices[letterIndices.length - 1], word);
-  }
-
-  function hasCombiningMark(word) {
-    for (var i = 0; i < word.length; i++) {
-      if (isArabicMark(word.charCodeAt(i))) return true;
+  function onlyMarksBetween(word, start, end) {
+    for (var i = start + 1; i < end; i++) {
+      var cp = word.charCodeAt(i);
+      if (isArabicMark(cp)) continue;
+      return false;
     }
-    return false;
+    return true;
   }
 
-  // A character is initial when it has no previous dual-joining letter.
-  function isInitialForm(index, word) {
-    var prevIndex = prevVisibleLetterIndex(index - 1, word);
-    if (prevIndex < 0) return true;
-    return !isDualJoining(word.charCodeAt(prevIndex));
-  }
-
-  // A character is final when it has no next dual-joining letter.
-  function isFinalForm(index, word) {
-    var nextIndex = nextVisibleLetterIndex(index + 1, word);
-    if (nextIndex < 0) return true;
-    return !isDualJoining(word.charCodeAt(nextIndex));
-  }
-
-  // A character is medial when it is between two dual-joining letters.
-  function isMedialForm(index, word) {
-    return !isInitialForm(index, word) && !isFinalForm(index, word) && isDualJoining(word.charCodeAt(index));
-  }
-
-  // A character is isolated when it connects to neither side.
-  function isIsolatedForm(index, word) {
-    var cp = word.charCodeAt(index);
-    if (RIGHT_JOIN[cp]) return true;
-    return isInitialForm(index, word) && isFinalForm(index, word);
+  function connectsToNext(word, current, next) {
+    return isDualJoining(current.cp) &&
+      isJoiningLetter(next.cp) &&
+      onlyMarksBetween(word, current.index, next.index);
   }
 
   // Detects lam + alef variants that should not receive an extra stretch.
@@ -172,67 +96,29 @@
     return prevCp === 0x0644 && isAlifVariant(nextCp);
   }
 
-  // Detects the beh + reh/meem/yaa final-ligature case that should also be skipped.
-  function isBehFinalLigature(prevCp, nextCp, nextIndex, word) {
-    return isBehClass(prevCp) && (isRehClass(nextCp) || isMeemClass(nextCp) || isYaaClass(nextCp)) && isFinalForm(nextIndex, word);
+  function canInsertTatweel(word, current, next) {
+    if (!connectsToNext(word, current, next)) return false;
+    if (isLamAlefSequence(current.cp, next.cp)) return false;
+    return true;
   }
 
-  // Decide whether a potential insertion point should be excluded.
-  function shouldSkipTatweelSlot(prevCp, nextCp, currentIndex, nextIndex, word) {
-    if (isLamAlefSequence(prevCp, nextCp)) return true;
-    if (isBehFinalLigature(prevCp, nextCp, nextIndex, word)) return true;
-    if (isIsolatedForm(currentIndex, word)) return true;
-    if (isIsolatedForm(nextIndex, word)) return true;
-    if (hasIsolatedTail(word) && currentIndex !== getLetterIndices(word)[0]) return true;
-    if (isFinalForm(currentIndex, word)) return true;
-    if (isInitialForm(nextIndex, word)) return true;
-    if (isNearFinalVisibleSlot(nextIndex, word)) return true;
-    if (isShortWordInitialSlot(nextIndex, word)) return true;
-    return false;
-  }
-
-  // Assign a heuristic score to each possible insertion point.
-  // Higher scores are preferred when distributing tatweels.
-  function slotPriority(prevCp, nextCp, word, nextIndex) {
-    if (prevCp === 0x0644 && nextIndex !== undefined && isFinalForm(nextIndex, word)) {
-      if (isAlifVariant(nextCp)) return 12;
-      return 1;
-    }
-    if (isBehClass(prevCp) && nextIndex !== undefined) {
-      if (isInitialForm(nextIndex, word) || isMedialForm(nextIndex, word)) return 1;
-    }
-    if (prevCp === 0x633 || prevCp === 0x634 || prevCp === 0x635 || prevCp === 0x636) return 12;
-    if (nextCp === 0x647 || nextCp === 0x629 || nextCp === 0x62F || nextCp === 0x630) return 11;
-    if (nextCp === 0x627 || nextCp === 0x622 || nextCp === 0x623 || nextCp === 0x625 ||
-        nextCp === 0x644 || nextCp === 0x643 || nextCp === 0x6A9 || nextCp === 0x6AF) return 10;
-    var isBeh = isBehClass(prevCp);
-    var isRaYa = isRehClass(nextCp) || isYaaClass(nextCp);
-    if (isBeh && isRaYa) return 9;
-    if (nextCp === 0x648 || nextCp === 0x639 || nextCp === 0x63A) return 8;
-    return 7;
+  function insertionPosition(next) {
+    return next.index;
   }
 
   // Discover all legal tatweel insertion points for a single word.
   function tatweelSlots(word) {
     var slots = [];
-    var letterIndices = getLetterIndices(word);
-    for (var i = 0; i < letterIndices.length - 1; i++) {
-      var currentIndex = letterIndices[i];
-      var nextIndex = letterIndices[i + 1];
-      var cp = word.charCodeAt(currentIndex);
-      if (!RIGHT_JOIN[cp] && cp >= 0x0600 && cp <= 0x06FF) {
-        var nextCp = word.charCodeAt(nextIndex);
-        if (shouldSkipTatweelSlot(cp, nextCp, currentIndex, nextIndex, word)) continue;
-        slots.push({ pos: nextIndex, priority: slotPriority(cp, nextCp, word, nextIndex) });
+    var letters = getLetters(word);
+    for (var i = 0; i < letters.length - 1; i++) {
+      if (canInsertTatweel(word, letters[i], letters[i + 1])) {
+        slots.push({ pos: insertionPosition(letters[i + 1]), priority: DEFAULT_PRIORITY });
       }
-    }
-    if (hasCombiningMark(word) && letterIndices.length > 1 && isFinalForm(letterIndices[letterIndices.length - 1], word)) {
-      return slots.slice(0, 1);
     }
     return slots;
   }
 
-  // Spread a fixed number of tatweels across the line using the highest-priority slots.
+  // Spread a fixed number of tatweels across the legal slots.
   function spreadTatweels(text, n) {
     if (n <= 0) return text;
     var words = text.split(' ');
@@ -274,35 +160,32 @@
       }
       ins.sort(function (a, b) { return a.pos - b.pos; });
       ins.forEach(function (entry) {
-        var t = new Array(entry.count + 1).join(TATWEEL);
-        chars.splice(entry.pos + offset, 0, t);
-        offset += entry.count;
+        var tatweels = new Array(entry.count + 1).join(TATWEEL).split('');
+        Array.prototype.splice.apply(chars, [entry.pos + offset, 0].concat(tatweels));
+        offset += tatweels.length;
       });
       return chars.join('');
     }).join(' ');
   }
 
-  // Build a ranked list of insertion slots for a line, optionally blending in font quality.
+  // Build a ranked list of insertion slots for a line, optionally using font quality.
   function buildSlots(text, params, fontProfile) {
+    params = params || {};
     var words = text.split(' ');
     var slots = [];
     words.forEach(function (w, wi) {
-      var letterIndices = getLetterIndices(w);
-      for (var i = 0; i < letterIndices.length - 1; i++) {
-        var currentIndex = letterIndices[i];
-        var nextIndex = letterIndices[i + 1];
-        var cp = w.charCodeAt(currentIndex);
-        if (RIGHT_JOIN[cp] || cp < 0x0600 || cp > 0x06FF) continue;
-        var nextCp = w.charCodeAt(nextIndex);
-        if (shouldSkipTatweelSlot(cp, nextCp, currentIndex, nextIndex, w)) continue;
-        var base = slotPriority(cp, nextCp, w, nextIndex);
+      var letters = getLetters(w);
+      for (var i = 0; i < letters.length - 1; i++) {
+        var current = letters[i];
+        var next = letters[i + 1];
+        if (!canInsertTatweel(w, current, next)) continue;
+        var base = DEFAULT_PRIORITY;
         var bonus = 0;
         if (fontProfile) {
-          var q = fontProfile.getQuality(w[currentIndex], w[nextIndex]);
-          bonus = (q - 0.5) * params.fontQualityBoost;
+          var q = fontProfile.getQuality(w[current.index], w[next.index]);
+          bonus = (q - 0.5) * (params.fontQualityBoost || 0);
         }
-        var blended = base * params.priorityBias + 7 * (1 - params.priorityBias) + bonus;
-        slots.push({ wi: wi, pos: nextIndex, score: blended });
+        slots.push({ wi: wi, pos: insertionPosition(next), score: base + bonus });
       }
     });
     slots.sort(function (a, b) { return b.score - a.score; });
@@ -329,8 +212,9 @@
       }
       ins.sort(function (a, b) { return a.pos - b.pos; });
       ins.forEach(function (e) {
-        chars.splice(e.pos + offset, 0, new Array(e.count + 1).join(TATWEEL));
-        offset += e.count;
+        var tatweels = new Array(e.count + 1).join(TATWEEL).split('');
+        Array.prototype.splice.apply(chars, [e.pos + offset, 0].concat(tatweels));
+        offset += tatweels.length;
       });
       return chars.join('');
     }).join(' ');
@@ -338,7 +222,8 @@
 
   // Find the maximum acceptable number of tatweels for a single line.
   function justifyLine(text, targetWidth, ctx, params, fontProfile) {
-    var target = targetWidth * params.targetFill;
+    params = params || {};
+    var target = targetWidth * (params.targetFill || 1);
     var natural = ctx.measureText(text).width;
 
     // If the line already fits, or it has no visible text, do nothing.

@@ -179,16 +179,13 @@ Ashaar.init({ justify: 'kashida' });
 Ashaar.justifyEl(document.querySelector('.my-poem'));
 ```
 
-Insertion follows the classical Arabic calligraphic priority order (from the HarfBuzz `HB_JustificationClass` enum, MIT licence):
+Insertion follows Arabic joining behavior:
 
-| Priority | Rule |
-|----------|------|
-| Highest | After **Seen/Sad** (س ش ص ض) in medial/initial form |
-| ↓ | Before final **Haa/TaaMarbutah** (ه ة) or **Dal/Dhal** (د ذ) |
-| ↓ | Before final **Alef** forms or **Lam/Kaf/Gaf** |
-| ↓ | After **Beh-group** (ب پ ت ث) before **Ra/Yaa** |
-| ↓ | Before **Waw** (و), **Ain** (ع), **Ghayn** (غ) |
-| Lowest | After any other dual-joining character |
+- A tatweel can be inserted only after a character that shapes as initial or medial.
+- It is never inserted after final or isolated forms.
+- Diacritics are ignored when deciding shaping context.
+- ZWNJ is treated as a hard non-joining boundary.
+- Lam-alef sequences are left untouched.
 
 ### No justification (default)
 
@@ -269,7 +266,7 @@ deployer.justifyEl(document.querySelector('.ashaar'));  // apply baked params
 
 | Parameter | Range | Effect |
 |-----------|-------|--------|
-| `priorityBias` | 0–1 | 0 = ignore HarfBuzz priority order, distribute uniformly; 1 = strict calligraphic order |
+| `priorityBias` | 0–1 | Legacy recipe field; retained for compatibility with older baked recipes |
 | `targetFill` | 0.8–1.0 | Fraction of column width to fill — values below 1.0 leave breathing room on shorter lines |
 | `fontQualityBoost` | 0–5 | Extra weight for slots where the font has a designed kashida glyph |
 

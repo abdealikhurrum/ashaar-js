@@ -38,19 +38,26 @@ function finish() {
   eq(slots.length, 0, 'tatweelSlots returns no slots for a lam-alef sequence with diacritics');
 }());
 
-(function testTatweelSlotsSkipFinalForm() {
+(function testTatweelSlotsAllowInitialAndMedialForms() {
   var slots = AshaarJustify.tatweelSlots('بيت');
-  deepEq(slots, [], 'tatweelSlots skips insertion before the final-form letter');
+  deepEq(slots, [
+    { pos: 1, priority: 7 },
+    { pos: 2, priority: 7 }
+  ], 'tatweelSlots allows insertion after initial and medial forms');
 }());
 
-(function testTatweelSlotsSkipFinalFormInLongerWord() {
+(function testTatweelSlotsAllowTailAdjacentMedialForm() {
   var slots = AshaarJustify.tatweelSlots('قطعة');
-  deepEq(slots, [], 'tatweelSlots skips the tail-adjacent slot in short words');
+  deepEq(slots, [
+    { pos: 1, priority: 7 },
+    { pos: 2, priority: 7 },
+    { pos: 3, priority: 7 }
+  ], 'tatweelSlots allows a slot before a final form when the previous character is medial');
 }());
 
-(function testSpreadTatweelsKeepsShortWordsFromTailArtifacts() {
+(function testSpreadTatweelsUsesAllLegalSlots() {
   var result = AshaarJustify.spreadTatweels('ليلي', 3);
-  eq(result, 'ليلي', 'spreadTatweels keeps the extra tatweel off the tail-adjacent slot');
+  eq(result, 'لـيـلـي', 'spreadTatweels uses all legal initial and medial slots');
 }());
 
 (function testTatweelSlotsTreatsZwnjAsAJoinBreaker() {
@@ -63,9 +70,9 @@ function finish() {
   eq(result.indexOf('ـ‌'), -1, 'spreadTatweels does not place a tatweel before zwnj');
 }());
 
-(function testSpreadTatweelsDoesNotInsertAfterFinalFormAcrossZwnj() {
+(function testSpreadTatweelsCanResumeAfterZwnj() {
   var result = AshaarJustify.spreadTatweels('بی‌اثر', 3);
-  eq(result, 'بی‌اثر', 'spreadTatweels keeps tatweels off the post-zwnj slot after a final-form glyph');
+  eq(result, 'بــی‌اثـر', 'spreadTatweels resumes within the joining run after zwnj');
 }());
 
 (function testTatweelSlotsSkipSlotsAroundIsolatedForms() {
@@ -73,26 +80,54 @@ function finish() {
   deepEq(slots, [], 'tatweelSlots skips insertions around isolated-form characters');
 }());
 
-(function testTatweelSlotsSkipsTheNoonSlotInNiestan() {
+(function testTatweelSlotsAllowJoiningSlotsInNiestan() {
   var slots = AshaarJustify.tatweelSlots('نیستان');
   deepEq(slots, [
-    { pos: 1, priority: 7 }
-  ], 'tatweelSlots keeps only the safe first noon slot in نیستان');
+    { pos: 1, priority: 7 },
+    { pos: 2, priority: 7 },
+    { pos: 3, priority: 7 },
+    { pos: 4, priority: 7 }
+  ], 'tatweelSlots keeps each joining slot in نیستان');
 }());
 
-(function testSpreadTatweelsDoesNotAppendATailToMarkedFinalWords() {
+(function testSpreadTatweelsIgnoresMarksInShaping() {
   var result = AshaarJustify.spreadTatweels('تَكَلَّمِي', 20);
-  ok(result.slice(-1) !== 'ـ', 'spreadTatweels does not append a tail to تَكَلَّمِي');
+  ok(/تَـ+/.test(result), 'spreadTatweels keeps marks attached to the current letter in تَكَلَّمِي');
 }());
 
-(function testSpreadTatweelsDoesNotAppendATailToMarkedFinalWordsWithMeem() {
+(function testSpreadTatweelsIgnoresMarksInMarkedWordWithMeem() {
   var result = AshaarJustify.spreadTatweels('مَطِيَّهُم', 20);
-  ok(result.slice(-1) !== 'ـ', 'spreadTatweels does not append a tail to مَطِيَّهُم');
+  ok(/مَـ+/.test(result), 'spreadTatweels keeps marks attached to the current letter in مَطِيَّهُم');
 }());
 
-(function testSpreadTatweelsLeavesShortWordsUnchanged() {
+(function testSpreadTatweelsChangesShortJoinableWords() {
   var result = AshaarJustify.spreadTatweels('مجنة', 3);
-  eq(result, 'مجنة', 'spreadTatweels leaves short words unchanged when only tail-adjacent slots exist');
+  eq(result, 'مـجـنـة', 'spreadTatweels changes short words when the slots are joinable');
+}());
+
+(function testSpreadTatweelsDoesNotAppendAfterFinalMarkedYeh() {
+  var result = AshaarJustify.spreadTatweels('تَكَلَّمِي', 20);
+  ok(!/يـ/.test(result), 'spreadTatweels does not insert after final yeh even when marks are present');
+}());
+
+(function testSpreadTatweelsDoesNotAppendAfterFinalMarkedMeem() {
+  var result = AshaarJustify.spreadTatweels('مَطِيَّهُم', 20);
+  ok(!/مـ$/.test(result), 'spreadTatweels does not insert after final meem even when marks are present');
+}());
+
+(function testSpreadTatweelsDoesNotAppendAfterTaaMarbuta() {
+  var result = AshaarJustify.spreadTatweels('مجنة', 20);
+  ok(result.indexOf('ةـ') === -1, 'spreadTatweels does not insert after final taa marbuta');
+}());
+
+(function testTatweelSlotsSkipBareHamza() {
+  var slots = AshaarJustify.tatweelSlots('بءت');
+  deepEq(slots, [], 'tatweelSlots treats bare hamza as non-joining');
+}());
+
+(function testTatweelSlotsSkipArabicPunctuation() {
+  var slots = AshaarJustify.tatweelSlots('ب،ت');
+  deepEq(slots, [], 'tatweelSlots does not treat Arabic punctuation as a joining letter');
 }());
 
 function deepEq(actual, expected, desc) {
