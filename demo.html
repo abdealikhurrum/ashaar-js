@@ -16,7 +16,7 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     body {
-      max-width: 900px;
+      max-width: 1180px;
       margin: 3rem auto;
       padding: 0 1.5rem;
       background: #faf9f7;
@@ -44,6 +44,10 @@
       min-width: 140px;
     }
 
+    .demo-controls input[type="text"] {
+      flex: 0 0 5rem;
+    }
+
     h1, h2, h3 {
       direction: ltr;
       font-family: sans-serif;
@@ -52,6 +56,14 @@
 
     h1 { font-size: 1.4rem; border-bottom: 2px solid #ddd; padding-bottom: .5rem; }
     h2 { font-size: 1.1rem; margin-top: 3rem; color: #666; }
+    h3 { font-size: .95rem; margin: 0 0 .25rem; }
+
+    .note {
+      direction: ltr;
+      color: #666;
+      font-size: .85rem;
+      margin: -.25rem 0 1rem;
+    }
 
     .demo-block {
       background: #fff;
@@ -63,6 +75,39 @@
       margin-inline: auto;
     }
 
+    .comparison-grid {
+      direction: ltr;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--demo-card-width, 780px)), 1fr));
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .comparison-card {
+      background: #fff;
+      border: 1px solid #e0ddd8;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .comparison-card header {
+      direction: ltr;
+      padding: .65rem .8rem;
+      background: #f5f2ec;
+      border-bottom: 1px solid #e0ddd8;
+    }
+
+    .comparison-card p {
+      direction: ltr;
+      color: #666;
+      font-size: .8rem;
+      margin: 0;
+    }
+
+    .comparison-card .ashaar {
+      padding: 1.25rem 1.5rem;
+    }
+
     /* Font variants for different sections */
     .arabic  { --ashaar-font-family: "Amiri", serif; --ashaar-font-size: 1.35rem; }
     .urdu    { --ashaar-font-family: "Noto Nastaliq Urdu", "Amiri", serif; --ashaar-font-size: 1.3rem; }
@@ -71,16 +116,29 @@
 <body>
 
 <h1>Ashaar.js — Layout Demo</h1>
+<p class="note"><a href="longform-stress.html">Open the long-form Arabic and Urdu stress pages</a></p>
 
 <div class="demo-controls">
   <label for="demo-width">Card width</label>
   <input id="demo-width" type="range" min="320" max="880" step="20" value="780">
   <output id="demo-width-value" for="demo-width">780px</output>
+  <label for="demo-stack-below">Stack below</label>
+  <input id="demo-stack-below" type="range" min="0" max="760" step="20" value="520">
+  <output id="demo-stack-below-value" for="demo-stack-below">520px</output>
   <label for="demo-gap-width">Hemistich gap</label>
   <input id="demo-gap-width" type="range" min="0" max="120" step="4" value="24">
   <output id="demo-gap-width-value" for="demo-gap-width">24px</output>
   <label for="demo-gap-symbol">Symbol</label>
   <input id="demo-gap-symbol" type="text" value="" placeholder="none" size="5">
+  <label for="demo-stack-style">Stack style</label>
+  <select id="demo-stack-style">
+    <option value="offset">Offset</option>
+    <option value="vertical">Vertical</option>
+  </select>
+  <label>
+    <input id="demo-stack-alternate" type="checkbox">
+    Alternate stacked
+  </label>
 </div>
 
 <!-- ── 1. Single bayt (inline separator) ────────────────────────────── -->
@@ -189,70 +247,125 @@
 </div>
 
 <h2 style="margin-top:3rem; border-top:1px solid #ddd; padding-top:2rem;">Justification modes</h2>
+<p class="note">The examples above use tuned justification by default. These three cards render the same lines with the three available approaches.</p>
 
-<!-- ── 10. CSS-native justification (text-justify: auto) ────────────── -->
-<h2>10. CSS-native justification — <code>ashaar--justify</code> class</h2>
-<p style="direction:ltr;font-size:.85rem;color:#666;margin:0 0 .5rem;">
-  Adds <code>text-align: justify; text-justify: auto</code> — browser uses kashida for RTL Arabic.
-  Works in Chrome/Edge; Firefox falls back to word spacing.
-</p>
-<div class="demo-block">
-  <div class="ashaar arabic ashaar--justify" data-ashaar>
+<div class="comparison-grid">
+  <section class="comparison-card">
+    <header>
+      <h3>Browser justification</h3>
+      <p>CSS <code>text-justify</code>; browser decides how Arabic is stretched.</p>
+    </header>
+    <div class="ashaar arabic" data-demo-mode="browser" data-ashaar>
 قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ وَمَنْزِلِ \ بِسِقْطِ اللِّوَى بَيْنَ الدَّخُولِ فَحَوْمَلِ
 بِعَيْنَيَّ هَلَّا بَكَّيَا أَوْ تَبَكَّيَا \ عَلَى النَّأْيِ مِنْ سُعْدَى وَمَا قَدْ تَوَلَّيَا
-  </div>
-</div>
+    </div>
+  </section>
 
-<!-- ── 11. JS kashida justification ─────────────────────────────────── -->
-<h2>11. JS kashida justification — <code>justify: true</code></h2>
-<p style="direction:ltr;font-size:.85rem;color:#666;margin:0 0 .5rem;">
-  Explicit tatweel (U+0640) insertion via DOM measurement + binary search.
-  Each column filled to its exact available width. Responsive via <code>ResizeObserver</code>.
-</p>
-<div class="demo-block">
-  <div class="ashaar arabic" id="justified-demo" data-ashaar>
-أَلَا لَيْتَ شِعْرِي هَلْ أَبِيتَنَّ لَيْلَةً \
-بِوَادٍ وَحَوْلِي إِذْخِرٌ وَجَلِيلُ
-وَهَلْ أَرِدَنَّ يَوْمًا مِيَاهَ مَجَنَّةٍ \
-وَهَلْ يَبْدُوَنَّ لِي شَامَةٌ وَطَفِيلُ
-  </div>
+  <section class="comparison-card">
+    <header>
+      <h3>Built-in justification</h3>
+      <p>Ashaar inserts legal tatweels and balances the poem block.</p>
+    </header>
+    <div class="ashaar arabic" data-demo-mode="builtin" data-ashaar>
+قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ وَمَنْزِلِ \ بِسِقْطِ اللِّوَى بَيْنَ الدَّخُولِ فَحَوْمَلِ
+بِعَيْنَيَّ هَلَّا بَكَّيَا أَوْ تَبَكَّيَا \ عَلَى النَّأْيِ مِنْ سُعْدَى وَمَا قَدْ تَوَلَّيَا
+    </div>
+  </section>
+
+  <section class="comparison-card">
+    <header>
+      <h3>Tuned justification</h3>
+      <p>AshaarTune applies recipe parameters on every render and resize.</p>
+    </header>
+    <div class="ashaar arabic" data-demo-mode="tuned" data-ashaar>
+قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ وَمَنْزِلِ \ بِسِقْطِ اللِّوَى بَيْنَ الدَّخُولِ فَحَوْمَلِ
+بِعَيْنَيَّ هَلَّا بَكَّيَا أَوْ تَبَكَّيَا \ عَلَى النَّأْيِ مِنْ سُعْدَى وَمَا قَدْ تَوَلَّيَا
+    </div>
+  </section>
 </div>
 
 <script src="ashaar-justify.js"></script>
 <script src="ashaar.js"></script>
+<script src="ashaar-tune.js"></script>
 <script>
   var demoWidth = document.getElementById('demo-width');
   var demoWidthValue = document.getElementById('demo-width-value');
+  var demoStackBelow = document.getElementById('demo-stack-below');
+  var demoStackBelowValue = document.getElementById('demo-stack-below-value');
   var demoGapWidth = document.getElementById('demo-gap-width');
   var demoGapWidthValue = document.getElementById('demo-gap-width-value');
   var demoGapSymbol = document.getElementById('demo-gap-symbol');
+  var demoStackStyle = document.getElementById('demo-stack-style');
+  var demoStackAlternate = document.getElementById('demo-stack-alternate');
 
   function demoOptions() {
     return {
       layout: 'auto',
-      justify: 'kashida',
+      justify: false,
+      stackBelow: parseFloat(demoStackBelow.value) || 0,
+      stackStyle: demoStackStyle.value,
+      stackAlign: demoStackAlternate.checked ? 'alternate' : 'center',
       gapWidth: demoGapWidth.value + 'px',
       gapSymbol: demoGapSymbol.value
     };
   }
 
+  function tunedRecipeFor(el) {
+    var spacingOnly = el.classList.contains('urdu');
+    return {
+      version: '1.0',
+      mode: 'poetry',
+      params: {
+        targetFill: 0.96,
+        balanceFill: 1.04,
+        fontQualityBoost: 1
+      },
+      method: spacingOnly ? 'spacing' : 'kashida',
+      tatweel: !spacingOnly,
+      maxScaleDown: 0.06
+    };
+  }
+
+  function applyTuned(el) {
+    AshaarTune.loadRecipe(tunedRecipeFor(el)).justifyEl(el, demoOptions());
+  }
+
   function setDemoWidth() {
     document.documentElement.style.setProperty('--demo-card-width', demoWidth.value + 'px');
     demoWidthValue.textContent = demoWidth.value + 'px';
+    demoStackBelowValue.textContent = demoStackBelow.value === '0' ? 'off' : demoStackBelow.value + 'px';
     document.querySelectorAll('.ashaar').forEach(function (el) {
-      Ashaar.applyAutoLayout(el);
+      Ashaar.applyAutoLayout(el, demoOptions());
     });
   }
 
   function renderDemo() {
     demoGapWidthValue.textContent = demoGapWidth.value + 'px';
-    Ashaar.init('[data-ashaar-source], [data-ashaar]', demoOptions());
+    var baseOptions = demoOptions();
+
+    Ashaar.init('[data-ashaar-source]:not([data-demo-mode]), [data-ashaar]:not([data-demo-mode])', baseOptions);
+    document.querySelectorAll('.ashaar:not([data-demo-mode])').forEach(applyTuned);
+
+    Ashaar.init('[data-demo-mode="browser"]', baseOptions);
+    document.querySelectorAll('[data-demo-mode="browser"]').forEach(function (el) {
+      el.classList.add('ashaar--justify');
+      Ashaar.applyAutoLayout(el, baseOptions);
+    });
+
+    Ashaar.init('[data-demo-mode="builtin"]', Object.assign({}, baseOptions, { justify: 'kashida' }));
+
+    Ashaar.init('[data-demo-mode="tuned"]', baseOptions);
+    document.querySelectorAll('[data-demo-mode="tuned"]').forEach(applyTuned);
+
     setDemoWidth();
   }
 
-  demoWidth.oninput = setDemoWidth;
+  demoWidth.oninput = renderDemo;
+  demoStackBelow.oninput = renderDemo;
   demoGapWidth.oninput = renderDemo;
   demoGapSymbol.oninput = renderDemo;
+  demoStackStyle.onchange = renderDemo;
+  demoStackAlternate.onchange = renderDemo;
 
   // Default init for all data-ashaar elements except the ones below
   renderDemo();

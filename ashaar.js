@@ -47,6 +47,10 @@
  *     CSS length for inter-hemistich spacing, mapped to --ashaar-gap-width
  *   opts.gapSymbol:
  *     optional visible symbol rendered between hemistiches
+ *   opts.stackAlign:
+ *     'center' | 'alternate' | 'right' for stacked couplets (default: 'center')
+ *   opts.stackStyle:
+ *     'offset' | 'vertical' for stacked couplets (default: 'offset')
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
@@ -171,6 +175,13 @@
     if (opts.gapWidth !== undefined) {
       containerEl.style.setProperty('--ashaar-gap-width', cssLength(opts.gapWidth));
     }
+    if (opts.stackMeasure !== undefined) {
+      containerEl.style.setProperty('--ashaar-stack-measure', cssLength(opts.stackMeasure));
+    }
+    containerEl.classList.toggle('ashaar--stack-vertical', opts.stackStyle === 'vertical');
+    containerEl.classList.toggle('ashaar--stack-offset', opts.stackStyle !== 'vertical');
+    containerEl.classList.toggle('ashaar--stack-alternate', opts.stackAlign === 'alternate' || opts.stackAlternate === true);
+    containerEl.classList.toggle('ashaar--stack-right', opts.stackAlign === 'right');
   }
 
   function renderBayt(b, opts) {
@@ -273,7 +284,11 @@
   function observeAutoLayout(containerEl, opts) {
     if (typeof window === 'undefined' || !window.ResizeObserver) return;
     if (containerEl._ashaarAutoLayoutObserver) containerEl._ashaarAutoLayoutObserver.disconnect();
+    var lastWidth = containerEl.getBoundingClientRect().width;
     var ro = new ResizeObserver(function () {
+      var width = containerEl.getBoundingClientRect().width;
+      if (Math.abs(width - lastWidth) < 0.5) return;
+      lastWidth = width;
       applyAutoLayout(containerEl, opts);
     });
     ro.observe(containerEl);
@@ -448,8 +463,16 @@
     afterFonts(function () {
       run();
       if (window.ResizeObserver) {
-        var ro = new ResizeObserver(run);
+        if (containerEl._ashaarJustifyObserver) containerEl._ashaarJustifyObserver.disconnect();
+        var lastWidth = containerEl.getBoundingClientRect().width;
+        var ro = new ResizeObserver(function () {
+          var width = containerEl.getBoundingClientRect().width;
+          if (Math.abs(width - lastWidth) < 0.5) return;
+          lastWidth = width;
+          run();
+        });
         ro.observe(containerEl);
+        containerEl._ashaarJustifyObserver = ro;
       }
     });
   }
@@ -460,6 +483,7 @@
    * init(selector?, opts?)
    *   opts.justify: 'css' | 'kashida' | true | false
    *   opts.layout:  'columns' | 'stacked' | 'auto'
+   *   opts.stackStyle: 'offset' | 'vertical'
    */
   function init(selector, opts) {
     if (selector && typeof selector === 'object' && !opts) { opts = selector; selector = null; }

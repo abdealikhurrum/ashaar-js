@@ -38,4 +38,15 @@ function finish() {
   ok(/\.ashaar-misra--ajuz\s*\{[^}]*text-align:\s*right/.test(css), 'ajuz aligns toward center gap');
 }());
 
+(function testStackedAlternateRulesExist() {
+  ok(/\.ashaar--stacked \.ashaar-bayt:not\(\.ashaar-bayt--solo\)\s*\{[^}]*width:\s*var\(--ashaar-stack-measure\)[^}]*margin-inline:\s*auto/.test(css), 'default stacked bayts use centered configured measure');
+  ok(/\.ashaar--stacked\.ashaar--stack-vertical \.ashaar-misra--ajuz\s*\{[^}]*transform:\s*none/.test(css), 'vertical stacked hemistiches stay in the same column');
+  ok(/\.ashaar--stacked\.ashaar--stack-vertical\.ashaar--stack-alternate\s*\{[^}]*--ashaar-stack-measure:\s*var\(--ashaar-stack-vertical-alternate-measure\)/.test(css), 'vertical alternate stacked mode uses a wider overlapping measure');
+  ok(/\.ashaar--stacked\.ashaar--stack-offset\.ashaar--stack-alternate\s*\{[^}]*--ashaar-stack-measure:\s*min\(/.test(css), 'offset alternate stacked mode caps bayt measure');
+  ok(/--ashaar-stack-offset-alternate-clearance/.test(css), 'offset alternate stacked mode keeps center clearance');
+  ok(/margin-block:\s*var\(--ashaar-stack-alternate-gap\)/.test(css), 'alternate stacked bayts get vertical clearance');
+  ok(/nth-child\(odd\)[^{]*\{[^}]*margin-inline-end:\s*auto/.test(css), 'odd stacked bayts start on the right');
+  ok(/nth-child\(even\)[^{]*\{[^}]*margin-inline-start:\s*auto/.test(css), 'even stacked bayts alternate to the left');
+}());
+
 finish();

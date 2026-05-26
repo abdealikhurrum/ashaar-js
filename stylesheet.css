@@ -13,6 +13,11 @@
   --ashaar-stanza-gap:  1.8em;
   --ashaar-poem-gap:    3em;
   --ashaar-stack-indent: 1.75em;
+  --ashaar-stack-measure: 62%;
+  --ashaar-stack-vertical-alternate-measure: 75%;
+  --ashaar-stack-offset-alternate-measure: 44%;
+  --ashaar-stack-offset-alternate-clearance: 10%;
+  --ashaar-stack-alternate-gap: 0.85em;
   --ashaar-bayt-gap:    0;
 
   font-family: var(--ashaar-font-family);
@@ -115,6 +120,11 @@
   align-items:    flex-end;
 }
 
+.ashaar--stacked .ashaar-bayt:not(.ashaar-bayt--solo) {
+  width: var(--ashaar-stack-measure);
+  margin-inline: auto;
+}
+
 .ashaar--stacked .ashaar-misra--sadr,
 .ashaar--stacked .ashaar-misra--ajuz {
   flex:       none;
@@ -126,8 +136,46 @@
   transform: translateX(calc(-1 * var(--ashaar-stack-indent)));
 }
 
+.ashaar--stacked.ashaar--stack-vertical .ashaar-misra--ajuz {
+  transform: none;
+}
+
 .ashaar--stacked .ashaar-gap {
   display: none;
+}
+
+.ashaar--stacked.ashaar--stack-right .ashaar-bayt:not(.ashaar-bayt--solo) {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+.ashaar--stacked.ashaar--stack-alternate .ashaar-bayt:not(.ashaar-bayt--solo) {
+  margin-block: var(--ashaar-stack-alternate-gap);
+}
+
+.ashaar--stacked.ashaar--stack-vertical.ashaar--stack-alternate {
+  --ashaar-stack-measure: var(--ashaar-stack-vertical-alternate-measure);
+}
+
+.ashaar--stacked.ashaar--stack-offset.ashaar--stack-alternate {
+  --ashaar-stack-measure: min(
+    var(--ashaar-stack-offset-alternate-measure),
+    calc((100% - var(--ashaar-stack-offset-alternate-clearance)) / 2)
+  );
+}
+
+.ashaar--stacked.ashaar--stack-alternate .ashaar-bayt:not(.ashaar-bayt--solo):nth-child(odd) {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
+}
+
+.ashaar--stacked.ashaar--stack-alternate .ashaar-bayt:not(.ashaar-bayt--solo):nth-child(even) {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.ashaar--stacked.ashaar--stack-alternate .ashaar-bayt--solo {
+  width: 100%;
 }
 
 /* ── Refrain colouring ────────────────────────────────────────────────── */

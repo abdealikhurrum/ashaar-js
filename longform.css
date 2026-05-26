@@ -1,0 +1,229 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --page-bg: #f8f7f3;
+  --ink: #1f2522;
+  --muted: #69716c;
+  --rule: #ded9ce;
+  --panel: #fffdfa;
+  --accent: #276b5f;
+  --warm: #9b5737;
+  --nav-bg: #eeebe3;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page-shell {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding: 2rem clamp(1rem, 3vw, 2rem) 4rem;
+}
+
+.topbar {
+  direction: ltr;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  padding-block: .75rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.topbar a,
+.card-grid a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 650;
+}
+
+h1, h2, h3, .deck, .section-kicker, .source-note, .topbar, .card-grid {
+  direction: ltr;
+}
+
+h1 {
+  margin: 1.2rem 0 .4rem;
+  font-size: clamp(2.1rem, 5vw, 4.8rem);
+  line-height: .98;
+  letter-spacing: 0;
+  max-width: 920px;
+}
+
+.deck {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+  margin: 0 0 1.5rem;
+}
+
+.section-kicker {
+  color: var(--warm);
+  font-size: .8rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-top: 1.6rem;
+}
+
+.source-note {
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.45;
+  margin: .6rem 0 1.4rem;
+}
+
+.reading-panel {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: clamp(1.1rem, 3vw, 2.4rem);
+  overflow: hidden;
+}
+
+.prose {
+  font-size: clamp(1.35rem, 2.5vw, 1.7rem);
+  line-height: 2.25;
+  max-width: 42em;
+  margin-inline: auto;
+  text-align: justify;
+  text-wrap: pretty;
+}
+
+.prose p {
+  margin: 0 0 1.05em;
+}
+
+.prose-line {
+  display: block;
+  inline-size: 100%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.prose-toggle {
+  direction: ltr;
+  display: flex;
+  justify-content: flex-start;
+  margin: 0 0 1rem;
+}
+
+.prose-toggle-group {
+  display: inline-flex;
+  padding: .2rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--nav-bg);
+}
+
+.prose-toggle button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: .55rem .8rem;
+}
+
+.prose-toggle button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(31, 37, 34, .12);
+}
+
+.arabic-text {
+  font-family: "Amiri", serif;
+  direction: rtl;
+}
+
+.urdu-text {
+  font-family: "Noto Nastaliq Urdu", "Amiri", serif;
+  direction: rtl;
+  line-height: 2.65;
+}
+
+.mixed {
+  background:
+    linear-gradient(90deg, rgba(39, 107, 95, .08), transparent 38%),
+    var(--panel);
+}
+
+.mixed .latin {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .72em;
+  color: var(--accent);
+}
+
+.ashaar.long-poem {
+  --ashaar-font-family: "Amiri", serif;
+  --ashaar-font-size: clamp(1.1rem, 2vw, 1.38rem);
+  --ashaar-line-height: 2.25;
+  --ashaar-gap-width: 24px;
+  max-width: 980px;
+  margin-inline: auto;
+}
+
+.ashaar.urdu-ghazal {
+  --ashaar-font-family: "Noto Nastaliq Urdu", "Amiri", serif;
+  --ashaar-font-size: clamp(1.12rem, 2.1vw, 1.45rem);
+  --ashaar-line-height: 2.75;
+  --ashaar-gap-width: 26px;
+  max-width: 980px;
+  margin-inline: auto;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.card-grid a {
+  display: block;
+  min-height: 12rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.card-grid a:hover {
+  border-color: var(--accent);
+}
+
+.card-grid strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.05rem;
+  margin-bottom: .6rem;
+}
+
+.card-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .reading-panel {
+    padding-inline: 1rem;
+  }
+
+  .prose {
+    text-align: start;
+  }
+
+}

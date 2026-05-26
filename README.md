@@ -253,7 +253,7 @@ const session = await AshaarTune.calibrateWidths({
 const responsiveRecipe = session.bake();
 ```
 
-**3. Deploy** — load a baked recipe for zero-calibration production use
+**3. Deploy** — load a recipe once, then apply it on every render/change
 
 ```js
 import recipe from './amiri-poetry.recipe.json' assert { type: 'json' };
@@ -261,9 +261,23 @@ import recipe from './amiri-poetry.recipe.json' assert { type: 'json' };
 const deployer = AshaarTune.loadRecipe(recipe);
 deployer.withFontProfile(fp);   // optional — attach font profile for quality boost
 
-Ashaar.init();                            // parse & render HTML only, no justification
-deployer.justifyEl(document.querySelector('.ashaar'));  // apply baked params
+function renderPoems() {
+  Ashaar.init('.ashaar', { layout: 'auto', justify: false });
+  document.querySelectorAll('.ashaar').forEach((el) => {
+    deployer.justifyEl(el, { layout: 'auto' });
+  });
+}
+
+renderPoems();
+window.addEventListener('resize', renderPoems);
 ```
+
+Calibration is what produces a better recipe. Tuning is the normal rendering
+step: after any width, font, gap, layout, or text change, re-apply the current
+recipe. `loadRecipe().justifyEl()` also observes each container for resizes, so
+single-element width changes are re-tuned automatically. Runtime resize handling
+is width-gated, so height changes caused by stacking or line wrapping do not
+cause an endless re-justification loop.
 
 ### Baked recipe format
 
@@ -332,19 +346,29 @@ Ashaar.init(selector?, opts?)
 // opts.justify: 'css' | 'kashida' | 'spacing' | true | false (default: false)
 // opts.layout:  'columns' | 'stacked' | 'auto' (default: 'columns')
 // opts.stackBelow / autoStackBelow: px width where auto layout stacks early
+// opts.stackAlign: 'center' | 'alternate' | 'right' for stacked couplets (default: 'center')
+// opts.stackStyle: 'offset' | 'vertical' for stacked couplets (default: 'offset')
+// opts.stackMeasure: CSS length or px number for centered stacked bayts
 // opts.gapWidth: CSS length or px number for inter-hemistich spacing
 // opts.gapSymbol: optional visible separator symbol between hemistiches
 // opts.balanceFill: target shared line width multiplier (default: 1.04)
 // opts.maxWordSpacing / minWordSpacing: px limits for word-gap adjustment
 // opts.maxScaleDown: final small font-size fallback (default: 0.06)
 
-// Stacked bayts put the sadr above the ajuz and indent the ajuz slightly.
+// Stacked bayts put the sadr above the ajuz. Offset stacking indents the ajuz.
 // It is a first-order layout choice for Arabic, Persian, and Urdu poems.
 Ashaar.init({ layout: 'stacked', justify: 'kashida' })
 
 // Auto layout is side-by-side when there is room, and falls back to stacked
 // as soon as a hemistich wraps, or earlier at a configured width.
 Ashaar.init({ layout: 'auto', stackBelow: 520, justify: 'spacing' })
+
+// Stacked couplets are centered by default; alternate right/left is opt-in.
+// Vertical alternating can use wider overlapping columns; offset alternating
+// keeps the right and left bayt columns clear of each other.
+Ashaar.init({ layout: 'auto', stackMeasure: '62%' })
+Ashaar.init({ layout: 'auto', stackAlign: 'alternate' })
+Ashaar.init({ layout: 'auto', stackStyle: 'vertical', stackAlign: 'alternate' })
 
 // Control the gap between hemistiches, with an optional decorative separator.
 Ashaar.init({ layout: 'auto', gapWidth: '2.5em', gapSymbol: '•' })
@@ -381,6 +405,11 @@ Override on `.ashaar` (or any ancestor) to theme:
   --ashaar-stanza-gap:    1.8em;
   --ashaar-poem-gap:      3em;
   --ashaar-stack-indent:  1.75em;   /* ajuz indent in stacked layout */
+  --ashaar-stack-measure: 62%;      /* centered stacked bayt width */
+  --ashaar-stack-vertical-alternate-measure: 75%;
+  --ashaar-stack-offset-alternate-measure: 44%;
+  --ashaar-stack-offset-alternate-clearance: 10%;
+  --ashaar-stack-alternate-gap: 0.85em;
 }
 ```
 
