@@ -262,7 +262,6 @@
 
   <label>Justification:</label>
   <select id="justify-mode">
-    <option value="tuned">Tuned recipe</option>
     <option value="none">None</option>
     <option value="css">CSS (text-justify: auto)</option>
     <option value="kashida">JS kashida</option>
@@ -353,8 +352,6 @@ function makeCard(poem, font) {
   card.className = 'card';
   card.dataset.script = poem.script;
   card.dataset.style  = font.style;
-  card.dataset.fontId = font.id;
-  card.dataset.poemId = poem.id;
 
   // Only show this font for compatible scripts
   if (font.scripts.indexOf(poem.script) === -1 && font.id !== 'fatemi-maqala') {
@@ -474,28 +471,24 @@ function applyJustify() {
     });
   });
 
-  if (mode === 'tuned') {
+  if (mode === 'css') {
     document.querySelectorAll('.ashaar').forEach(function (el) {
-      if (el.style.display !== 'none') applyTunedJustify(el);
-    });
-  } else if (mode === 'css') {
-    document.querySelectorAll('.ashaar').forEach(function (el) {
-      Ashaar.applyAutoLayout(el, visualOptions());
+      Ashaar.applyAutoLayout(el);
       el.classList.add('ashaar--justify');
     });
   } else if (mode === 'kashida') {
     document.querySelectorAll('.ashaar').forEach(function (el) {
       if (el.style.display !== 'none') {
-        Ashaar.applyAutoLayout(el, visualOptions());
+        Ashaar.applyAutoLayout(el);
         var spacingOnly = el.classList.contains('font-nastaliq');
-        Ashaar.justifyEl(el, Object.assign({}, visualOptions(), spacingOnly ? { method: 'spacing', tatweel: false } : {}));
+        Ashaar.justifyEl(el, spacingOnly ? { method: 'spacing', tatweel: false } : {});
       }
     });
   } else if (mode === 'spacing') {
     document.querySelectorAll('.ashaar').forEach(function (el) {
       if (el.style.display !== 'none') {
-        Ashaar.applyAutoLayout(el, visualOptions());
-        Ashaar.justifyEl(el, Object.assign({}, visualOptions(), { method: 'spacing', tatweel: false }));
+        Ashaar.applyAutoLayout(el);
+        Ashaar.justifyEl(el, { method: 'spacing', tatweel: false });
       }
     });
   }
@@ -517,7 +510,7 @@ function applyCardWidth() {
   document.documentElement.style.setProperty('--visual-card-width', input.value + 'px');
   output.textContent = input.value + 'px';
   document.querySelectorAll('.ashaar').forEach(function (el) {
-    if (el.style.display !== 'none') Ashaar.applyAutoLayout(el, visualOptions());
+    if (el.style.display !== 'none') Ashaar.applyAutoLayout(el);
   });
 }
 
@@ -535,33 +528,6 @@ function applyGapOptions() {
 
 document.getElementById('gap-width').oninput = applyGapOptions;
 document.getElementById('gap-symbol').oninput = applyGapOptions;
-
-function defaultRecipeFor(ashaarEl) {
-  var spacingOnly = ashaarEl.classList.contains('font-nastaliq');
-  return {
-    version: '1.0',
-    mode: 'poetry',
-    params: {
-      targetFill: 0.96,
-      balanceFill: 1.04,
-      fontQualityBoost: 1,
-    },
-    method: spacingOnly ? 'spacing' : 'kashida',
-    tatweel: !spacingOnly,
-    maxScaleDown: 0.06,
-  };
-}
-
-function recipeFor(ashaarEl) {
-  var card = ashaarEl.closest('.card');
-  var key = card.dataset.fontId + '-' + card.dataset.poemId;
-  return recipes[key] || defaultRecipeFor(ashaarEl);
-}
-
-function applyTunedJustify(ashaarEl) {
-  var deployer = AshaarTune.loadRecipe(recipeFor(ashaarEl));
-  deployer.justifyEl(ashaarEl, visualOptions());
-}
 
 // ── Calibration ───────────────────────────────────────────────────────────────
 
@@ -601,7 +567,9 @@ function calibrateCard(ashaarEl, font, poem, scoreEl) {
     scoreEl.textContent = (session.score * 100).toFixed(0) + '%';
     scoreEl.className   = 'score-badge ' + scoreClass(session.score);
 
-    applyTunedJustify(ashaarEl.closest('.card').querySelector('.ashaar'));
+    // Apply recipe immediately
+    var deployer = AshaarTune.loadRecipe(recipes[key]);
+    deployer.justifyEl(ashaarEl.closest('.card').querySelector('.ashaar'));
   }).catch(function (err) {
     scoreEl.textContent = 'err';
     scoreEl.className   = 'score-badge bad';

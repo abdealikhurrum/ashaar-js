@@ -253,7 +253,6 @@
     var w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
     ctx.fillText(text, w - 4, h / 2); // right-aligned for RTL
-    ctx.willReadFrequently = true; // hint for performance
     var data = ctx.getImageData(0, 0, w, h).data;
     var profile = new Float32Array(w);
     for (var x = 0; x < w; x++) {
@@ -660,16 +659,12 @@
        * Uses recipe params + optional font profile.
        * Sets up a ResizeObserver for responsive re-justification.
        */
-      justifyEl: function (containerEl, opts) {
-        opts = opts || {};
+      justifyEl: function (containerEl) {
         if (typeof document === 'undefined') return;
         var SELECTOR = '.ashaar-misra--sadr, .ashaar-misra--ajuz';
         var fp       = fontProfile;
 
         function run() {
-          if (opts.layout === 'auto' && root.Ashaar && root.Ashaar.applyAutoLayout) {
-            containerEl.classList.remove('ashaar--stacked');
-          }
           var spans = containerEl.querySelectorAll(SELECTOR);
           if (!spans.length) return;
 
@@ -705,12 +700,11 @@
             if (!item.text.trim() || !item.available) continue;
             var target = Math.min(item.available, sharedTarget);
             var scale = 1;
-            var spacingMode = recipe.method === 'spacing' || recipe.tatweel === false;
             var wordGaps = countWordGaps(item.text);
             var maxWordSpacing = typeof recipe.maxWordSpacing === 'number' ? recipe.maxWordSpacing : fontSize * 0.28;
             var minWordSpacing = typeof recipe.minWordSpacing === 'number' ? recipe.minWordSpacing : -fontSize * 0.08;
             var desiredWordSpacing = wordGaps ? (target - item.natural) / wordGaps : 0;
-            var wordSpacing = spacingMode && wordGaps ? clamp(desiredWordSpacing, minWordSpacing, maxWordSpacing) : 0;
+            var wordSpacing = wordGaps ? clamp(desiredWordSpacing, minWordSpacing, maxWordSpacing) : 0;
             if (wordSpacing) {
               item.span.style.wordSpacing = Math.round(wordSpacing * 100) / 100 + 'px';
               ctx.wordSpacing = item.span.style.wordSpacing;
@@ -723,33 +717,19 @@
               scale = Math.max(1 - maxScaleDown, target / item.natural);
               item.span.style.fontSize = Math.round(scale * 1000) / 10 + '%';
             }
-            if (spacingMode) {
+            if (recipe.method === 'spacing' || recipe.tatweel === false) {
               item.span.textContent = item.text;
             } else {
               item.span.textContent = justifyLine(item.text, target / scale, ctx, paramsForWidth(recipe, target), fp);
             }
             ctx.wordSpacing = '';
           }
-          if (opts.layout === 'auto' && root.Ashaar && root.Ashaar.applyAutoLayout) {
-            root.Ashaar.applyAutoLayout(containerEl, opts);
-          }
         }
 
         if (document.fonts && document.fonts.ready) {
           document.fonts.ready.then(function () {
             run();
-            if (window.ResizeObserver) {
-              if (containerEl._ashaarTuneObserver) containerEl._ashaarTuneObserver.disconnect();
-              var lastWidth = containerEl.getBoundingClientRect().width;
-              var ro = new ResizeObserver(function () {
-                var width = containerEl.getBoundingClientRect().width;
-                if (Math.abs(width - lastWidth) < 0.5) return;
-                lastWidth = width;
-                run();
-              });
-              ro.observe(containerEl);
-              containerEl._ashaarTuneObserver = ro;
-            }
+            if (window.ResizeObserver) new ResizeObserver(run).observe(containerEl);
           });
         } else {
           setTimeout(run, 150);

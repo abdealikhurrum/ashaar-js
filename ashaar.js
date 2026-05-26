@@ -47,10 +47,6 @@
  *     CSS length for inter-hemistich spacing, mapped to --ashaar-gap-width
  *   opts.gapSymbol:
  *     optional visible symbol rendered between hemistiches
- *   opts.stackAlign:
- *     'center' | 'alternate' | 'right' for stacked couplets (default: 'center')
- *   opts.stackStyle:
- *     'offset' | 'vertical' for stacked couplets (default: 'offset')
  */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
@@ -175,13 +171,6 @@
     if (opts.gapWidth !== undefined) {
       containerEl.style.setProperty('--ashaar-gap-width', cssLength(opts.gapWidth));
     }
-    if (opts.stackMeasure !== undefined) {
-      containerEl.style.setProperty('--ashaar-stack-measure', cssLength(opts.stackMeasure));
-    }
-    containerEl.classList.toggle('ashaar--stack-vertical', opts.stackStyle === 'vertical');
-    containerEl.classList.toggle('ashaar--stack-offset', opts.stackStyle !== 'vertical');
-    containerEl.classList.toggle('ashaar--stack-alternate', opts.stackAlign === 'alternate' || opts.stackAlternate === true);
-    containerEl.classList.toggle('ashaar--stack-right', opts.stackAlign === 'right');
   }
 
   function renderBayt(b, opts) {
@@ -254,42 +243,26 @@
     return rect.height > numericLineHeight(span) * 1.35;
   }
 
-  function stackBelowWidth(opts) {
-    opts = opts || {};
-    var value = opts.stackBelow !== undefined ? opts.stackBelow : opts.autoStackBelow;
-    var width = typeof value === 'number' ? value : parseFloat(value);
-    return isFinite(width) && width > 0 ? width : null;
-  }
-
-  function applyAutoLayout(containerEl, opts) {
-    opts = opts || {};
+  function applyAutoLayout(containerEl) {
     var wasStacked = containerEl.classList.contains('ashaar--stacked');
     containerEl.classList.remove('ashaar--stacked');
     var spans = containerEl.querySelectorAll('.ashaar-misra--sadr, .ashaar-misra--ajuz');
-    var breakpoint = stackBelowWidth(opts);
-    var shouldStack = breakpoint !== null && containerEl.getBoundingClientRect().width <= breakpoint;
-
-    if (!shouldStack) {
-      for (var i = 0; i < spans.length; i++) {
-        if (misraWraps(spans[i])) {
-          shouldStack = true;
-          break;
-        }
+    var shouldStack = false;
+    for (var i = 0; i < spans.length; i++) {
+      if (misraWraps(spans[i])) {
+        shouldStack = true;
+        break;
       }
     }
     if (shouldStack) containerEl.classList.add('ashaar--stacked');
     return wasStacked !== shouldStack;
   }
 
-  function observeAutoLayout(containerEl, opts) {
+  function observeAutoLayout(containerEl) {
     if (typeof window === 'undefined' || !window.ResizeObserver) return;
-    if (containerEl._ashaarAutoLayoutObserver) containerEl._ashaarAutoLayoutObserver.disconnect();
-    var lastWidth = containerEl.getBoundingClientRect().width;
+    if (containerEl._ashaarAutoLayoutObserver) return;
     var ro = new ResizeObserver(function () {
-      var width = containerEl.getBoundingClientRect().width;
-      if (Math.abs(width - lastWidth) < 0.5) return;
-      lastWidth = width;
-      applyAutoLayout(containerEl, opts);
+      applyAutoLayout(containerEl);
     });
     ro.observe(containerEl);
     containerEl._ashaarAutoLayoutObserver = ro;
@@ -448,14 +421,12 @@
     var SELECTOR = '.ashaar-misra--sadr, .ashaar-misra--ajuz';
 
     function run() {
-      if (opts.layout === 'auto') containerEl.classList.remove('ashaar--stacked');
       var spans = containerEl.querySelectorAll(SELECTOR);
       if (!spans.length) return;
       var probe = createProbe(spans[0]);
       var targets = blockTargets(spans, probe, opts);
       for (var i = 0; i < spans.length; i++) justifyMisra(spans[i], probe, targets[i], opts);
       document.body.removeChild(probe);
-      if (opts.layout === 'auto') applyAutoLayout(containerEl, opts);
     }
 
     if (typeof document === 'undefined') return;
@@ -463,16 +434,8 @@
     afterFonts(function () {
       run();
       if (window.ResizeObserver) {
-        if (containerEl._ashaarJustifyObserver) containerEl._ashaarJustifyObserver.disconnect();
-        var lastWidth = containerEl.getBoundingClientRect().width;
-        var ro = new ResizeObserver(function () {
-          var width = containerEl.getBoundingClientRect().width;
-          if (Math.abs(width - lastWidth) < 0.5) return;
-          lastWidth = width;
-          run();
-        });
+        var ro = new ResizeObserver(run);
         ro.observe(containerEl);
-        containerEl._ashaarJustifyObserver = ro;
       }
     });
   }
@@ -483,7 +446,6 @@
    * init(selector?, opts?)
    *   opts.justify: 'css' | 'kashida' | true | false
    *   opts.layout:  'columns' | 'stacked' | 'auto'
-   *   opts.stackStyle: 'offset' | 'vertical'
    */
   function init(selector, opts) {
     if (selector && typeof selector === 'object' && !opts) { opts = selector; selector = null; }
@@ -505,8 +467,8 @@
       (function (targetEl) {
         afterFonts(function () {
           if (opts.layout === 'auto') {
-            applyAutoLayout(targetEl, opts);
-            observeAutoLayout(targetEl, opts);
+            applyAutoLayout(targetEl);
+            observeAutoLayout(targetEl);
           }
 
           if (opts.justify === 'css') {
