@@ -260,9 +260,9 @@
 
   function observeAutoLayout(containerEl) {
     if (typeof window === 'undefined' || !window.ResizeObserver) return;
-    if (containerEl._ashaarAutoLayoutObserver) return;
+    if (containerEl._ashaarAutoLayoutObserver) containerEl._ashaarAutoLayoutObserver.disconnect();
     var ro = new ResizeObserver(function () {
-      applyAutoLayout(containerEl);
+      applyAutoLayout(containerEl, opts);
     });
     ro.observe(containerEl);
     containerEl._ashaarAutoLayoutObserver = ro;
