@@ -82,7 +82,19 @@ Each line ends with `\`, signalling that it should pair with the following line 
 
 ---
 
-### 4. Solo misra — full-width centred
+### 4. Multi-misra source rows
+
+Three or more separated misras on one physical source line stay on one rendered row. A following bare line remains a centered solo line, and a following two-part line remains a couplet.
+
+```
+شاه كے اصحاب تھے \ خلق ميں الباب تھے \ صدق كے ارباب تھے \
+هو گئے شہ پر فدا
+هائے كربلاء والو \ هائے كربلاء والو
+```
+
+---
+
+### 5. Solo misra — full-width centred
 
 A bare line (no `\` anywhere) is never auto-paired. It spans the full container width, centred. Good for titles, maqtas, or single-misra lines that stand alone.
 
@@ -95,7 +107,7 @@ Each of these lines renders full-width because neither contains a `\`.
 
 ---
 
-### 5. Stanza and poem boundaries
+### 6. Stanza and poem boundaries
 
 A blank line separates stanzas within one poem. A line containing only `---` starts a new poem entirely (produces a separate `.ashaar-poem` element).
 
@@ -427,6 +439,13 @@ Override on `.ashaar` (or any ancestor) to theme:
         <span class="ashaar-gap-symbol">•</span>
       </span>
       <span class="ashaar-misra ashaar-misra--ajuz">…</span>
+    </div>
+
+    <!-- three or more misras preserved from one source line -->
+    <div class="ashaar-misra-row ashaar-misra-row--3">
+      <span class="ashaar-misra ashaar-misra--row">…</span>
+      <span class="ashaar-misra ashaar-misra--row">…</span>
+      <span class="ashaar-misra ashaar-misra--row">…</span>
     </div>
 
     <!-- solo misra -->

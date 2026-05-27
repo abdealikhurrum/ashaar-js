@@ -38,6 +38,11 @@ function finish() {
   ok(/\.ashaar-misra--ajuz\s*\{[^}]*text-align:\s*right/.test(css), 'ajuz aligns toward center gap');
 }());
 
+(function testMultiMisraRowsExist() {
+  ok(/\.ashaar-misra-row\s*\{[^}]*display:\s*flex/.test(css), 'multi-misra rows render as flex rows');
+  ok(/\.ashaar-misra--row\s*\{[^}]*text-align:\s*center/.test(css), 'multi-misra row items center within columns');
+}());
+
 (function testStackedAlternateRulesExist() {
   ok(/\.ashaar--stacked \.ashaar-bayt:not\(\.ashaar-bayt--solo\)\s*\{[^}]*width:\s*var\(--ashaar-stack-measure\)[^}]*margin-inline:\s*auto/.test(css), 'default stacked bayts use centered configured measure');
   ok(/\.ashaar--stacked\.ashaar--stack-vertical \.ashaar-misra--ajuz\s*\{[^}]*transform:\s*none/.test(css), 'vertical stacked hemistiches stay in the same column');

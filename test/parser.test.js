@@ -143,6 +143,20 @@ diag('1. Basic parsing');
   eq(bayts[1].ajuz, 'paired ajuz', 'trailing-pair ajuz ok');
 }());
 
+(function testMultiMisraLineIsRow() {
+  var poems = parse('one \\ two \\ three \\\nfour\nrefrain a \\ refrain b');
+  var rows = poems[0].stanzas[0].bayts;
+  eq(rows.length, 3, 'multi-misra source line keeps three rendered rows');
+  eq(rows[0].type, 'row', 'three separated misras become a row');
+  eq(rows[0].misras.length, 3, 'row preserves all three misras');
+  eq(rows[0].misras[0].text, 'one', 'row first misra preserved');
+  eq(rows[0].misras[2].text, 'three', 'row third misra preserved');
+  eq(rows[1].ajuz, null, 'following bare line remains centered solo');
+  eq(rows[2].type, 'bayt', 'following two-part line remains a couplet');
+  var html = render('one \\ two \\ three \\\nfour\nrefrain a \\ refrain b');
+  ok(html.indexOf('ashaar-misra-row ashaar-misra-row--3') !== -1, 'render includes three-misra row class');
+}());
+
 // ── 2. Stanza and poem boundaries ───────────────────────────────────────────
 
 diag('2. Stanza and poem boundaries');
@@ -159,6 +173,12 @@ diag('2. Stanza and poem boundaries');
   var poems = parse(text);
   eq(poems.length, 2, '--- separator: two poems');
   eq(countBayts(poems), 2, '--- separator: one bayt per poem');
+}());
+
+(function testEmDashPoemBoundary() {
+  var text = 'a \\ b\n—\nc \\ d';
+  var poems = parse(text);
+  eq(poems.length, 2, 'em dash separator: two poems');
 }());
 
 (function testMultiplePoems() {
@@ -315,13 +335,13 @@ diag('6. Edge cases');
 }());
 
 (function testMultipleSeparatorsOnOneLine() {
-  // Three parts → one bayt + one solo misra (odd leftover)
+  // Three parts on one physical line preserve that source line as one row.
   var poems = parse('a \\ b \\ c');
-  var bayts = allBayts(poems);
-  eq(bayts[0].sadr, 'a', 'first pair sadr');
-  eq(bayts[0].ajuz, 'b', 'first pair ajuz');
-  eq(bayts[1].sadr, 'c', 'odd leftover becomes solo');
-  ok(bayts[1].ajuz === null, 'odd leftover has no ajuz');
+  var row = allBayts(poems)[0];
+  eq(row.type, 'row', 'three parts become one row');
+  eq(row.misras.length, 3, 'row has three misras');
+  eq(row.misras[0].text, 'a', 'row first misra');
+  eq(row.misras[2].text, 'c', 'row third misra');
 }());
 
 (function testPoemSeparatorWithWhitespace() {

@@ -60,6 +60,13 @@
   justify-content: center;
 }
 
+.ashaar-misra-row {
+  display:      flex;
+  direction:    rtl;
+  align-items:  baseline;
+  width:        100%;
+}
+
 /* ── Hemistiches ──────────────────────────────────────────────────────── */
 
 .ashaar-misra {
@@ -85,6 +92,12 @@
   flex:       none;
   text-align: center;
   width:      100%;
+}
+
+.ashaar-misra--row {
+  flex:       1 1 0;
+  min-width:  0;
+  text-align: center;
 }
 
 /* ── CSS-native justification (opt-in via class or init({justify:'css'})) ─ */
@@ -192,8 +205,14 @@
     align-items:    center;
   }
 
+  .ashaar-misra-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
   .ashaar-misra--sadr,
-  .ashaar-misra--ajuz {
+  .ashaar-misra--ajuz,
+  .ashaar-misra--row {
     text-align: center;
     width:      100%;
     flex:       none;

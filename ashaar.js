@@ -7,6 +7,9 @@
  *     sadr \ ajuz            (backslash separator)
  *     sadr * ajuz            (asterisk separator)
  *
+ *   Multi-misra row (three or more misras on one physical line):
+ *     misra \ misra \ misra \
+ *
  *   Trailing-pair misra (hemistich that pairs with the next line):
  *     sadr \                 (trailing backslash — pairs with next line)
  *     ajuz                   (bare next line becomes the ajuz)
@@ -60,13 +63,14 @@
 
   var SEP_RE       = /\s*[\\*|]\s*/;
   var STANZA_SEP_RE = /\n{2,}/;
-  var POEM_SEP_RE   = /\n[ \t]*---[ \t]*(?:\n|$)/g;
+  var POEM_SEP_RE   = /\n[ \t]*(?:---|[—–])[ \t]*(?:\n|$)/g;
 
   // ── Parsing ───────────────────────────────────────────────────────────────
 
   /**
    * Parse a single raw line into an array of items:
    *   { type: 'bayt',  sadr, ajuz, sadrRefrain, ajuzRefrain }
+   *   { type: 'row', misras: [{ text, isRefrain }] }
    *   { type: 'misra', text, isRefrain, needsPairing }
    *
    * needsPairing=true  → trailing separator present; pair with next line
@@ -86,23 +90,21 @@
     var cleanParts = parts.filter(function (p) { return p.length > 0; });
     if (!cleanParts.length) return null;
 
-    if (cleanParts.length >= 2) {
-      var result = [];
-      for (var i = 0; i < cleanParts.length; i += 2) {
-        if (i + 1 < cleanParts.length) {
-          result.push({
-            type: 'bayt',
-            sadr: cleanParts[i], ajuz: cleanParts[i + 1],
-            sadrRefrain: isRefrain, ajuzRefrain: isRefrain
-          });
-        } else {
-          result.push({
-            type: 'misra', text: cleanParts[i],
-            isRefrain: isRefrain, needsPairing: trailingPairing
-          });
-        }
-      }
-      return result;
+    if (cleanParts.length > 2) {
+      return [{
+        type: 'row',
+        misras: cleanParts.map(function (part) {
+          return { text: part, isRefrain: isRefrain };
+        })
+      }];
+    }
+
+    if (cleanParts.length === 2) {
+      return [{
+        type: 'bayt',
+        sadr: cleanParts[0], ajuz: cleanParts[1],
+        sadrRefrain: isRefrain, ajuzRefrain: isRefrain
+      }];
     }
 
     return [{ type: 'misra', text: cleanParts[0], isRefrain: isRefrain, needsPairing: trailingPairing }];
@@ -119,7 +121,7 @@
     var i = 0;
     while (i < items.length) {
       var cur = items[i];
-      if (cur.type === 'bayt') {
+      if (cur.type === 'bayt' || cur.type === 'row') {
         bayts.push(cur);
         i++;
       } else if (cur.needsPairing && i + 1 < items.length && items[i + 1].type === 'misra') {
@@ -197,15 +199,28 @@
       '</div>';
   }
 
+  function renderRow(row) {
+    var count = row.misras.length;
+    var cls = 'ashaar-misra-row ashaar-misra-row--' + count;
+    var spans = row.misras.map(function (m) {
+      var misraCls = 'ashaar-misra ashaar-misra--row' + (m.isRefrain ? ' ashaar-misra--refrain' : '');
+      return '<span class="' + misraCls + '">' + esc(m.text) + '</span>';
+    }).join('');
+    return '<div class="' + cls + '">' + spans + '</div>';
+  }
+
   function stanzaClass(bayts) {
-    var mainCount = bayts.filter(function (b) { return !b.sadrRefrain || !b.ajuzRefrain; }).length;
+    var mainCount = bayts.filter(function (b) {
+      if (b.type === 'row') return true;
+      return !b.sadrRefrain || !b.ajuzRefrain;
+    }).length;
     var typeMap = { 1: 'bayt', 2: 'rubaei', 3: 'sudaisi' };
     return 'ashaar-stanza ashaar-stanza--' + (typeMap[mainCount] || 'multi');
   }
 
   function renderStanza(s, opts) {
     return '<div class="' + stanzaClass(s.bayts) + '">' + s.bayts.map(function (b) {
-      return renderBayt(b, opts);
+      return b.type === 'row' ? renderRow(b) : renderBayt(b, opts);
     }).join('') + '</div>';
   }
 
