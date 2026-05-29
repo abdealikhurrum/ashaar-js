@@ -25,7 +25,7 @@
     --rose:#d98c7a;
     --line:rgba(210,173,90,.22);
     --line-soft:rgba(160,170,200,.13);
-    --maxw:1160px;
+    --maxw:1280px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -77,7 +77,7 @@
   .hero .couplet-live{position:relative;z-index:2;max-width:760px;margin:0 auto 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0}
   .hero .couplet-live .ashaar{--ashaar-color:var(--parch);--ashaar-font-size:clamp(24px,4.1vw,38px);--ashaar-line-height:2;--ashaar-gap-color:var(--gold)}
   .attribution{position:relative;z-index:2;font-style:italic;color:var(--parch-soft);font-size:15px;margin-bottom:42px}
-  .hero h1{position:relative;z-index:2;font-family:"Fraunces",serif;font-weight:400;font-size:clamp(34px,5.6vw,62px);line-height:1.07;letter-spacing:-.015em;max-width:940px;margin:0 auto 24px}
+  .hero h1{position:relative;z-index:2;font-family:"Fraunces",serif;font-weight:400;font-size:clamp(30px,4.4vw,48px);line-height:1.12;letter-spacing:-.012em;max-width:1180px;margin:0 auto 24px;text-wrap:balance}
   .hero h1 em{font-style:italic;color:var(--lapis)}
   .lede{position:relative;z-index:2;max-width:640px;margin:0 auto 38px;font-size:19px;color:var(--parch-soft)}
   .hero-actions{position:relative;z-index:2;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
@@ -122,16 +122,16 @@
   .hint code{font-family:"JetBrains Mono",monospace;font-size:.92em;color:var(--gold);background:rgba(210,173,90,.1);padding:1px 6px;border-radius:3px}
 
   /* ---------- features ---------- */
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:54px}
-  @media(max-width:860px){.grid{grid-template-columns:1fr 1fr}}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:54px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
   @media(max-width:560px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line-soft);padding:32px 28px;border-radius:5px;position:relative;
+  .card{background:var(--panel);border:1px solid var(--line-soft);padding:40px 36px;border-radius:5px;position:relative;
     transition:transform .4s cubic-bezier(.2,.7,.2,1),box-shadow .4s,border-color .4s;opacity:0;transform:translateY(24px)}
   .card.in{opacity:1;transform:none}
   .card:hover{transform:translateY(-5px);border-color:var(--gold);box-shadow:0 26px 50px -30px rgba(0,0,0,.9)}
-  .card .gl{font-family:"Amiri",serif;font-size:22px;color:var(--gold-bright);margin-bottom:16px;display:block}
-  .card h3{font-family:"Fraunces",serif;font-weight:500;font-size:21px;margin-bottom:10px}
-  .card p{color:var(--parch-soft);font-size:16px}
+  .card .gl{font-family:"Amiri",serif;font-size:24px;color:var(--gold-bright);margin-bottom:18px;display:block}
+  .card h3{font-family:"Fraunces",serif;font-weight:500;font-size:22px;margin-bottom:11px;text-wrap:balance}
+  .card p{color:var(--parch-soft);font-size:16.5px}
   .card code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--gold);background:rgba(210,173,90,.1);padding:1px 5px;border-radius:3px}
 
   /* ---------- quick start ---------- */
@@ -233,6 +233,7 @@
         <button data-layout="stacked">Stacked</button>
       </div>
     </div>
+    <p class="hint" style="margin-top:18px"><b style="color:var(--gold-bright);font-weight:500">Try it →</b> cycle through <b style="color:var(--parch)">None → CSS&nbsp;native → Kashida&nbsp;(tatweel)</b> to compare how each mode fills the line. Kashida balances every misra to the longest line.</p>
     <p class="hint">Syntax: <code>\</code> splits a couplet · a bare line is a full-width solo misra · blank line = stanza · <code>---</code> = new poem · trailing <code>%</code> marks a refrain.</p>
   </div>
 </section>
