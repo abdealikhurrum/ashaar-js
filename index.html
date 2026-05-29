@@ -77,7 +77,22 @@
   .hero .couplet-live{position:relative;z-index:2;max-width:1060px;margin:0 auto 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0}
   .hero .couplet-live .ashaar{--ashaar-color:var(--parch);--ashaar-font-size:clamp(18px,2.3vw,27px);--ashaar-line-height:2;--ashaar-gap-color:var(--gold)}
   #hero-poem .ashaar-misra{white-space:nowrap}
-  @media(max-width:560px){#hero-poem .ashaar-misra{white-space:normal}.hero .couplet-live .ashaar{--ashaar-font-size:19px}}
+  /* failover: indented stacked (staircase) */
+  @media(max-width:768px){
+    .hero .couplet-live{max-width:none}
+    .hero .couplet-live .ashaar{--ashaar-font-size:clamp(19px,3.6vw,25px)}
+    #hero-poem .ashaar-bayt{flex-direction:column;align-items:flex-end;width:76%;margin-inline:auto}
+    #hero-poem .ashaar-misra--sadr,#hero-poem .ashaar-misra--ajuz{flex:none;width:100%;text-align:right}
+    #hero-poem .ashaar-misra--ajuz{transform:translateX(-1.6em)}
+    #hero-poem .ashaar-gap{display:none}
+  }
+  /* failover: linear stacked (centred) */
+  @media(max-width:480px){
+    #hero-poem .ashaar-bayt{align-items:center;width:100%}
+    #hero-poem .ashaar-misra--sadr,#hero-poem .ashaar-misra--ajuz{text-align:center;white-space:normal}
+    #hero-poem .ashaar-misra--ajuz{transform:none}
+    .hero .couplet-live .ashaar{--ashaar-font-size:20px}
+  }
   .attribution{position:relative;z-index:2;font-style:italic;color:var(--parch-soft);font-size:15px;margin-bottom:42px}
   .hero h1{position:relative;z-index:2;font-family:"Fraunces",serif;font-weight:400;font-size:clamp(30px,4.4vw,48px);line-height:1.12;letter-spacing:-.012em;max-width:1180px;margin:0 auto 24px;text-wrap:balance}
   .hero h1 em{font-style:italic;color:var(--lapis)}
