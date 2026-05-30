@@ -140,6 +140,36 @@ function finish() {
   deepEq(slots, [], 'tatweelSlots does not treat Arabic punctuation as a joining letter');
 }());
 
+(function testSpreadTatweelsIsIdempotent() {
+  var once = AshaarJustify.spreadTatweels('ليلي', 3);
+  var twice = AshaarJustify.spreadTatweels(once, 3);
+  eq(twice, once, 'spreadTatweels is idempotent — re-applying the same count does not compound tatweels');
+}());
+
+(function testSpreadTatweelsZeroStripsExisting() {
+  var stretched = AshaarJustify.spreadTatweels('ليلي', 3);
+  eq(AshaarJustify.spreadTatweels(stretched, 0), 'ليلي', 'spreadTatweels(text, 0) strips existing tatweels back to the bare line');
+}());
+
+(function testJustifyLineReJustifiesDownToNarrowerTarget() {
+  var ctx = { measureText: function (s) { return { width: s.replace(/\s/g, '').length }; } };
+  var base = 'قفا نبك من ذكرى';
+  var wide = AshaarJustify.justifyLine(base, 30, ctx, { targetFill: 1 });
+  var narrow = AshaarJustify.justifyLine(wide, 18, ctx, { targetFill: 1 });
+  var wideN = (wide.match(/ـ/g) || []).length;
+  var narrowN = (narrow.match(/ـ/g) || []).length;
+  ok(wideN > 0, 'justifyLine adds tatweels for a wide target');
+  ok(narrowN > 0 && narrowN < wideN, 'justifyLine re-justifies an already-stretched line DOWN to a narrower target');
+}());
+
+(function testJustifyLineStripsBackToBareWhenItFits() {
+  var ctx = { measureText: function (s) { return { width: s.replace(/\s/g, '').length }; } };
+  var base = 'قفا نبك من ذكرى';
+  var wide = AshaarJustify.justifyLine(base, 30, ctx, { targetFill: 1 });
+  var bare = AshaarJustify.justifyLine(wide, base.replace(/\s/g, '').length, ctx, { targetFill: 1 });
+  ok(!/ـ/.test(bare), 'justifyLine returns the bare line when it already meets the target (no leftover tatweels)');
+}());
+
 function deepEq(actual, expected, desc) {
   ok(JSON.stringify(actual) === JSON.stringify(expected), desc);
 }

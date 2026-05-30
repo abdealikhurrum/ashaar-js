@@ -12,6 +12,14 @@
   var ZWNJ = 0x200C;
   var DEFAULT_PRIORITY = 7;
 
+  // Tatweels are elongation, not content. Strip them at every public entry so
+  // justification always re-derives from the bare line: it is idempotent and
+  // reducible — re-justify any number of times and the count follows the target
+  // width / font / fill rather than compounding on previously inserted tatweels.
+  function stripTatweels(text) {
+    return String(text == null ? '' : text).replace(/ـ/g, '');
+  }
+
   // Letters that can connect from the previous character but not onward.
   var RIGHT_JOIN = (function () {
     var s = {};
@@ -129,6 +137,7 @@
 
   // Spread a fixed number of tatweels across the legal slots.
   function spreadTatweels(text, n) {
+    text = stripTatweels(text);
     if (n <= 0) return text;
     var words = text.split(' ');
     var allSlots = [];
@@ -233,6 +242,7 @@
   // Find the maximum acceptable number of tatweels for a single line.
   function justifyLine(text, targetWidth, ctx, params, fontProfile) {
     params = params || {};
+    text = stripTatweels(text);
     var target = targetWidth * (params.targetFill || 1);
     var natural = ctx.measureText(text).width;
 
